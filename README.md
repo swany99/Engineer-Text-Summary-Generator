@@ -217,7 +217,7 @@ Client reported excessive vibration and high-pitched noise coming from the prima
             hideMessage();
             const userQuery = engineerInput.value.trim();
 
-            if (USER_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
+            if (USER_API_KEY === "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY") {
                  showMessage("Error: API Key is missing. Please edit the index.html file and paste your key into the USER_API_KEY variable.");
                  return;
             }
