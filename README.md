@@ -62,7 +62,7 @@
             <label for="engineerInput" class="block text-lg font-medium text-gray-700 mb-2">1. Engineer's Detailed Notes:</label>
 <textarea id="engineerInput" rows="8" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150" placeholder="Paste the full, detailed technical report here. For example: 'Client reported excessive vibration from the main hydraulic pump. Upon inspection, I found the coupling bolts had sheared due to previous over-torque. I replaced the damaged coupling with a new, correctly rated unit and performed laser alignment checks to ensure optimal operation.'"> Paste Engineers Text
 </textarea>
-            <p class="text-center text-gray-500 mt-1">This text will be analysed and structured for you to copy and paste.</p>
+            <p class="text-sm text-center text-gray-500 mt-1">This text will be analysed and structured for you to copy and paste.</p>
         </div>
 
         <!-- Button -->
@@ -77,11 +77,11 @@
         <div>
             <label for="summaryOutput" class="block text-lg font-medium text-gray-700 mb-2">2. Structured Invoice Summary:</label>
             <textarea id="summaryOutput" rows="8" readonly class="w-full p-4 border border-green-500 bg-green-50 rounded-lg font-mono text-gray-800 focus:outline-none resize-none"></textarea>
-            <p id="charCount" class="text-sm text-gray-500 mt-1 text-right">Characters: 0 / 470 (Includes headers and spaces)</p>
+            <p id="charCount" class="text-sm text-center text-gray-500 mt-1 text-right">Characters: 0 / 470 (Includes headers and spaces)</p>
             <button onclick="copyToClipboard()" class="mt-2 w-full bg-green-500 text-white font-semibold py-2 rounded-lg hover:bg-green-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-green-300 active:scale-95">
                 Copy to Clipboard
             </button>
-            <p id="copyMessage" class="text-center text-center text-green-700 mt-2 opacity-0 transition duration-300">Copied!</p>
+            <p id="copyMessage" class="text-sm text-center text-green-700 mt-2 opacity-0 transition duration-300">Copied!</p>
         </div>
 
         <!-- Error/Message Box -->
