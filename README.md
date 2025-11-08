@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -100,15 +100,9 @@ Client reported excessive vibration and high-pitched noise coming from the prima
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
-        
-        // --- API KEY SOURCING ---
-        // 1. If running in a secure platform (like Canvas), __API_KEY is provided.
-        // 2. If running externally (e.g., Netlify/Vercel), it should be injected via a build tool's environment variable (e.g., process.env.VITE_GEMINI_API_KEY).
-        const API_KEY = typeof __API_KEY !== 'undefined' ? __API_KEY : 
-                        (typeof process !== 'undefined' && process.env.VITE_GEMINI_API_KEY) ? process.env.VITE_GEMINI_API_KEY : '';
-
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`;
+        // --- NEW ARCHITECTURE: CALL THE PROXY ENDPOINT ---
+        // We no longer call the Gemini API directly. The serverless function handles the key.
+        const PROXY_URL = '/.netlify/functions/generateSummary'; 
 
         // Elements
         const engineerInput = document.getElementById('engineerInput');
@@ -158,37 +152,33 @@ Client reported excessive vibration and high-pitched noise coming from the prima
         }
 
         /**
-         * Handles the API call with exponential backoff for retries.
-         * @param {object} payload - The request payload for the Gemini API.
+         * Handles the API call with exponential backoff for retries (client-side only).
+         * Note: The serverless function handles the actual Gemini API call logic.
+         * We retry the *proxy* call in case of network issues.
+         * @param {object} payload - The request payload containing the user text.
          * @param {number} maxRetries - Maximum number of retries.
-         * @returns {Promise<object>} The API response data.
+         * @returns {Promise<object>} The proxy response data.
          */
         async function fetchWithBackoff(payload, maxRetries = 3) {
             
-            if (API_KEY === "") {
-                 // Throwing an informative error if the key is missing when running externally
-                 throw new Error("API Key is missing. Please ensure your Gemini API key is set as an environment variable (e.g., VITE_GEMINI_API_KEY) and injected via your hosting service.");
-            }
-
             for (let i = 0; i < maxRetries; i++) {
                 try {
-                    const url = `${API_URL}?key=${API_KEY}`;
-                    const response = await fetch(url, {
+                    const response = await fetch(PROXY_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
 
-                    if (response.status === 429 && i < maxRetries - 1) {
-                        // Rate limit error (429), retry with backoff
-                        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        continue;
-                    }
-
                     if (!response.ok) {
-                        const errorBody = await response.json();
-                        throw new Error(`API Request failed with status ${response.status}: ${errorBody.error?.message || 'Unknown error'}`);
+                        // For non-OK responses (e.g., 500 from proxy, or network error), retry.
+                        if (i < maxRetries - 1) {
+                             const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                             await new Promise(resolve => setTimeout(resolve, delay));
+                             continue;
+                        }
+                        
+                        const errorBody = await response.json().catch(() => ({error: {message: 'Non-JSON error response from proxy.'}}));
+                        throw new Error(`Proxy Request failed with status ${response.status}: ${errorBody.error?.message || 'Unknown server error'}`);
                     }
 
                     return await response.json();
@@ -204,7 +194,7 @@ Client reported excessive vibration and high-pitched noise coming from the prima
 
 
         /**
-         * Main function to generate the summary using the Gemini API.
+         * Main function to generate the summary by calling the secure proxy.
          */
         async function generateSummary() {
             hideMessage();
@@ -219,29 +209,12 @@ Client reported excessive vibration and high-pitched noise coming from the prima
             generateButton.disabled = true;
             buttonText.classList.add('hidden');
             loadingSpinner.classList.remove('hidden');
-            summaryOutput.value = "Analyzing and generating structured summary...";
+            summaryOutput.value = "Sending request to secure serverless proxy...";
             updateCharCount();
 
-            const systemPrompt = `You are a professional technical summarization engine for client invoicing. Your task is to analyze detailed engineering reports (mechanical, electrical, or hydraulic) and extract the Symptoms, Cause, and Solution.
-
-            You MUST format the output into exactly three separate paragraphs, each preceded by a bold heading and ending with a period. Use the following structure precisely, with two newline characters (\n\n) between each section:
-            
-            **Symptoms**
-            [A professional, concise summary of the symptom(s).]
-
-            **Cause**
-            [A professional, concise summary of the cause identified.]
-
-            **Solution**
-            [A professional, concise summary of the remedy applied.]
-
-            The total generated text, including the bold headers, paragraphs, and all newlines/spaces, MUST NOT exceed 470 characters in length. This is a strict, hard limit. Prioritize extreme brevity while maintaining professionalism.`;
-
+            // The client only needs to send the user text content. The proxy adds the system prompt.
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
             };
 
             try {
@@ -253,12 +226,21 @@ Client reported excessive vibration and high-pitched noise coming from the prima
                     const text = candidate.content.parts[0].text.trim();
                     summaryOutput.value = text;
                 } else {
+                    // Check for proxy-reported errors
+                    if (result.error && result.error.message) {
+                         throw new Error(`Server Proxy Error: ${result.error.message}`);
+                    }
                     throw new Error("Received an unexpected or empty response from the API.");
                 }
 
             } catch (error) {
-                console.error("Gemini API Error:", error);
-                showMessage(`Failed to generate summary: ${error.message}.`);
+                console.error("Summary Generation Error:", error);
+                // The error message might contain internal details; sanitize it for the user
+                const displayMessage = error.message.includes("Proxy Request failed") 
+                    ? `Failed to generate summary: ${error.message}` 
+                    : "An unexpected error occurred during summary generation. Check server logs.";
+
+                showMessage(displayMessage);
                 summaryOutput.value = "Error generating summary.";
             } finally {
                 // UI state: Finished
@@ -274,7 +256,7 @@ Client reported excessive vibration and high-pitched noise coming from the prima
          */
         function copyToClipboard() {
             const textToCopy = summaryOutput.value;
-            if (textToCopy && textToCopy !== "Analyzing and generating structured summary..." && textToCopy !== "Error generating summary.") {
+            if (textToCopy && textToCopy !== "Sending request to secure serverless proxy..." && textToCopy !== "Error generating summary.") {
                 // Use the document.execCommand('copy') fallback for compatibility
                 try {
                     summaryOutput.select();
