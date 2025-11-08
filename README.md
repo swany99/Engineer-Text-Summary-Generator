@@ -60,7 +60,7 @@
         <!-- Input Section -->
         <div class="mb-6">
             <label for="engineerInput" class="block text-lg text-center font-medium text-gray-700 mb-2">Input Engineer's Notes</label>
-<textarea id="engineerInput" rows="8" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150" placeholder="Paste the full, detailed technical report here. For example: 'Client reported excessive vibration from the main hydraulic pump. Upon inspection, I found the coupling bolts had sheared due to previous over-torque. I replaced the damaged coupling with a new, correctly rated unit and performed laser alignment checks to ensure optimal operation.'">Paste Engineers Text</textarea>
+<textarea id="engineerInput" rows="8" class="w-full p-4 border border-gray-300 rounded-lg text-center focus:ring-primary-blue focus:border-primary-blue transition duration-150" placeholder="Paste the full, detailed technical report here. For example: 'Client reported excessive vibration from the main hydraulic pump. Upon inspection, I found the coupling bolts had sheared due to previous over-torque. I replaced the damaged coupling with a new, correctly rated unit and performed laser alignment checks to ensure optimal operation.'">Paste Engineers Text here</textarea>
             <p class="text-sm text-center text-gray-500 mt-1">This text will be analysed and structured for you to copy and paste.</p>
         </div>
 
