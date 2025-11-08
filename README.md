@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -54,7 +54,7 @@
             Engineer Text Summary Generator
         </h1>
         <p class="text-center text-gray-500 mb-8">
-            Generates a professional, structured summary with Symptoms, Cause, and Solution headings.
+            Generates a professional, structured summary with Symptoms, Cause, and Solution headings. **Strictly limited to 470 characters total.**
         </p>
 
         <!-- Input Section -->
@@ -95,14 +95,14 @@ Client reported excessive vibration and high-pitched noise coming from the prima
     </div>
 
     <script>
-        // Global variables for Firebase configuration (Mandatory for canvas environment)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // --- NEW ARCHITECTURE: CALL THE PROXY ENDPOINT ---
-        // We no longer call the Gemini API directly. The serverless function handles the key.
-        const PROXY_URL = '/.netlify/functions/generateSummary'; 
+        // --- CRITICAL STEP FOR YOUR GITHUB PAGES DEPLOYMENT ---
+        // 🚨 ACTION REQUIRED: Replace "YOUR_GEMINI_API_KEY_HERE" with your actual key.
+        // This key will be visible in the source code.
+        const USER_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
+        
+        // --- GEMINI API CONFIGURATION (Direct Call) ---
+        const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`;
 
         // Elements
         const engineerInput = document.getElementById('engineerInput');
@@ -131,7 +131,6 @@ Client reported excessive vibration and high-pitched noise coming from the prima
             }
         }
         
-        // Initial count for the pre-filled example
         window.onload = updateCharCount;
 
 
@@ -152,33 +151,52 @@ Client reported excessive vibration and high-pitched noise coming from the prima
         }
 
         /**
-         * Handles the API call with exponential backoff for retries (client-side only).
-         * Note: The serverless function handles the actual Gemini API call logic.
-         * We retry the *proxy* call in case of network issues.
-         * @param {object} payload - The request payload containing the user text.
+         * System instruction defining the LLM's persona and output format.
+         */
+        const systemPrompt = `You are a professional technical summarization engine for client invoicing. Your task is to analyze detailed engineering reports (mechanical, electrical, or hydraulic) and extract the Symptoms, Cause, and Solution.
+
+        You MUST format the output into exactly three separate paragraphs, each preceded by a bold heading and ending with a period. Use the following structure precisely, with two newline characters (\n\n) between each section:
+        
+        **Symptoms**
+        [A professional, concise summary of the symptom(s).]
+
+        **Cause**
+        [A professional, concise summary of the cause identified.]
+
+        **Solution**
+        [A professional, concise summary of the remedy applied.]
+
+        The total generated text, including the bold headers, paragraphs, and all newlines/spaces, MUST NOT exceed 470 characters in length. This is a strict, hard limit. Prioritize extreme brevity while maintaining professionalism.`;
+
+        /**
+         * Handles the API call with exponential backoff for retries.
+         * @param {object} payload - The full request payload.
          * @param {number} maxRetries - Maximum number of retries.
-         * @returns {Promise<object>} The proxy response data.
+         * @returns {Promise<object>} The API response data.
          */
         async function fetchWithBackoff(payload, maxRetries = 3) {
             
             for (let i = 0; i < maxRetries; i++) {
                 try {
-                    const response = await fetch(PROXY_URL, {
+                    const url = `${API_URL}?key=${USER_API_KEY}`;
+                    const response = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
 
+                    if (response.status === 401) {
+                         throw new Error("API Key Invalid. Please check the key in the source code.");
+                    }
                     if (!response.ok) {
-                        // For non-OK responses (e.g., 500 from proxy, or network error), retry.
+                        // For non-OK responses, retry.
                         if (i < maxRetries - 1) {
                              const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
                              await new Promise(resolve => setTimeout(resolve, delay));
                              continue;
                         }
-                        
-                        const errorBody = await response.json().catch(() => ({error: {message: 'Non-JSON error response from proxy.'}}));
-                        throw new Error(`Proxy Request failed with status ${response.status}: ${errorBody.error?.message || 'Unknown server error'}`);
+                        const errorBody = await response.json().catch(() => ({error: {message: 'Non-JSON error response.'}}));
+                        throw new Error(`API Request failed with status ${response.status}: ${errorBody.error?.message || 'Unknown API error'}`);
                     }
 
                     return await response.json();
@@ -192,13 +210,17 @@ Client reported excessive vibration and high-pitched noise coming from the prima
             }
         }
 
-
         /**
-         * Main function to generate the summary by calling the secure proxy.
+         * Main function to generate the summary by calling the Gemini API directly.
          */
         async function generateSummary() {
             hideMessage();
             const userQuery = engineerInput.value.trim();
+
+            if (USER_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
+                 showMessage("Error: API Key is missing. Please edit the index.html file and paste your key into the USER_API_KEY variable.");
+                 return;
+            }
 
             if (!userQuery) {
                 showMessage("Please paste the engineer's technical notes into the input box before generating the summary.");
@@ -209,12 +231,15 @@ Client reported excessive vibration and high-pitched noise coming from the prima
             generateButton.disabled = true;
             buttonText.classList.add('hidden');
             loadingSpinner.classList.remove('hidden');
-            summaryOutput.value = "Sending request to secure serverless proxy...";
+            summaryOutput.value = "Generating summary...";
             updateCharCount();
 
-            // The client only needs to send the user text content. The proxy adds the system prompt.
+            // Reconstruct the final payload for the Gemini API
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
             };
 
             try {
@@ -226,19 +251,18 @@ Client reported excessive vibration and high-pitched noise coming from the prima
                     const text = candidate.content.parts[0].text.trim();
                     summaryOutput.value = text;
                 } else {
-                    // Check for proxy-reported errors
                     if (result.error && result.error.message) {
-                         throw new Error(`Server Proxy Error: ${result.error.message}`);
+                         throw new Error(`API Error: ${result.error.message}`);
                     }
                     throw new Error("Received an unexpected or empty response from the API.");
                 }
 
             } catch (error) {
                 console.error("Summary Generation Error:", error);
-                // The error message might contain internal details; sanitize it for the user
-                const displayMessage = error.message.includes("Proxy Request failed") 
-                    ? `Failed to generate summary: ${error.message}` 
-                    : "An unexpected error occurred during summary generation. Check server logs.";
+                
+                const displayMessage = error.message.includes("API Key Invalid")
+                    ? error.message
+                    : `Failed to generate summary. Please check your network connection and API key. Details: ${error.message}`;
 
                 showMessage(displayMessage);
                 summaryOutput.value = "Error generating summary.";
@@ -256,7 +280,7 @@ Client reported excessive vibration and high-pitched noise coming from the prima
          */
         function copyToClipboard() {
             const textToCopy = summaryOutput.value;
-            if (textToCopy && textToCopy !== "Sending request to secure serverless proxy..." && textToCopy !== "Error generating summary.") {
+            if (textToCopy && textToCopy !== "Generating summary..." && textToCopy !== "Error generating summary.") {
                 // Use the document.execCommand('copy') fallback for compatibility
                 try {
                     summaryOutput.select();
