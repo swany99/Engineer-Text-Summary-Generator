@@ -54,7 +54,7 @@
             Engineer Text Summary Generator
         </h1>
         <p class="text-center text-gray-500 mb-8">
-            Generates a professional, structured summary with Symptoms, Cause, and Solution headings. **Strictly limited to 470 characters total.**
+            Generates a professional, structured summary with Symptoms, Cause, and Solution headings.
         </p>
 
         <!-- Input Section -->
