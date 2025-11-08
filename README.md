@@ -50,7 +50,7 @@
 
     <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-xl p-6 sm:p-10">
         <h1 class="text-3xl sm:text-4xl font-extrabold text-primary-blue mb-2 text-center">
-            Symptom-Cause-Solution (SCS) Summarizer
+            Symptom-Cause-Solution (SCS) Summary
         </h1>
         <p class="text-center text-gray-500 mb-8">
             Analyze engineering notes and generate a professional, concise summary for invoicing (Max 470 characters).
