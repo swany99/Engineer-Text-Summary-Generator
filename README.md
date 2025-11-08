@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content= text-center, initial-scale=1.0">
     <title>Engineer Text Summary Generator</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -62,7 +62,7 @@
             <label for="engineerInput" class="block text-lg font-medium text-gray-700 mb-2">1. Engineer's Detailed Notes:</label>
 <textarea id="engineerInput" rows="8" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150" placeholder="Paste the full, detailed technical report here. For example: 'Client reported excessive vibration from the main hydraulic pump. Upon inspection, I found the coupling bolts had sheared due to previous over-torque. I replaced the damaged coupling with a new, correctly rated unit and performed laser alignment checks to ensure optimal operation.'"> Paste Engineers Text
 </textarea>
-            <p class="text-center text-gray-500 mt-1">This text will be analysed and structured for you to then copy & paste into the external box.</p>
+            <p class="text-center text-gray-500 mt-1">This text will be analysed and structured for you to copy and paste.</p>
         </div>
 
         <!-- Button -->
