@@ -98,7 +98,7 @@ Customer reported high-pitched noise coming from the engine and a intermittent l
 
         const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`;
-        const API_KEY = ""; // Canvas will provide this during runtime
+        const API_KEY = AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY
 
         // Elements
         const engineerInput = document.getElementById('engineerInput');
