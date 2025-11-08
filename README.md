@@ -61,7 +61,7 @@
         <div class="mb-6">
             <label for="engineerInput" class="block text-lg font-medium text-gray-700 mb-2">1. Engineer's Detailed Notes:</label>
             <textarea id="engineerInput" rows="8" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150" placeholder="Paste the full, detailed technical report here. For example: 'Client reported excessive vibration from the main hydraulic pump (Symptom). Upon inspection, I found the coupling bolts had sheared due to previous over-torqueing (Cause). I replaced the damaged coupling with a new, correctly rated unit and performed laser alignment checks to ensure optimal operation (Solution).'">
-Client reported excessive vibration and high-pitched noise coming from the primary coolant loop motor, which was causing intermittent thermal shutdowns. Disassembly revealed that the stator winding insulation had failed due to ingress of moisture, causing a phase-to-ground short circuit. The motor was removed, stripped down, and a full rewind was performed with VPI insulation. The motor was reinstalled and tested under full load for 2 hours with stable temperature and current readings.
+
             </textarea>
             <p class="text-sm text-gray-500 mt-1">This text will be analyzed and structured for the customer invoice.</p>
         </div>
