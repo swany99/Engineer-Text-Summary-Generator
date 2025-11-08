@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content= text-center, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Engineer Text Summary Generator</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -54,7 +54,7 @@
             Engineer Text Summary Generator
         </h1>
         <p class="text-center text-gray-500 mb-8">
-            Generates a professional, structured summary with Symptoms, Cause, and Solution headings.
+            Generates a professional, structured summary using Symptoms, Cause, and Solution.
         </p>
 
         <!-- Input Section -->
@@ -81,7 +81,7 @@
             <button onclick="copyToClipboard()" class="mt-2 w-full bg-green-500 text-white font-semibold py-2 rounded-lg hover:bg-green-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-green-300 active:scale-95">
                 Copy to Clipboard
             </button>
-            <p id="copyMessage" class="text-sm text-center text-green-700 mt-2 opacity-0 transition duration-300">Copied!</p>
+            <p id="copyMessage" class="text-center text-center text-green-700 mt-2 opacity-0 transition duration-300">Copied!</p>
         </div>
 
         <!-- Error/Message Box -->
