@@ -50,7 +50,7 @@
 
     <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-xl p-6 sm:p-10">
         <h1 class="text-3xl sm:text-4xl font-extrabold text-primary-blue mb-2 text-center">
-            Symptom-Cause-Solution (SCS) Summary
+            Symptom, Cause, Solution (SCS) Summary
         </h1>
         <p class="text-center text-gray-500 mb-8">
             Analyze engineering notes and generate a professional, concise summary for invoicing (Max 470 characters).
@@ -60,7 +60,7 @@
         <div class="mb-6">
             <label for="engineerInput" class="block text-lg font-medium text-gray-700 mb-2">1. Engineer's Detailed Notes:</label>
             <textarea id="engineerInput" rows="8" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150" placeholder="Paste the full, detailed technical report here. For example: 'Client reported excessive vibration from the main hydraulic pump (Symptom). Upon inspection, I found the coupling bolts had sheared due to previous over-torqueing (Cause). I replaced the damaged coupling with a new, correctly rated unit and performed laser alignment checks to ensure optimal operation (Solution).'">
-Client reported excessive vibration and high-pitched noise coming from the primary coolant loop motor, which was causing intermittent thermal shutdowns (Symptom). Disassembly revealed that the stator winding insulation had failed due to ingress of moisture, causing a phase-to-ground short circuit (Cause). The motor was removed, stripped down, and a full rewind was performed with VPI insulation. The motor was reinstalled and tested under full load for 2 hours with stable temperature and current readings (Solution).
+Customer reported high-pitched noise coming from the engine and a intermittent low voltage warning on the display. On investigation i found that the alternator mount had failed causing the belt to become loose and make a high-pitch noise. The alternator was removed, all assosiated parts including tensions were checked, cleaned and found to be servicable, a service exchange alternator was installed along with a new belt. The machine was tested under full load with no noise present and voltage output was checked and within specification, charging at 28v.
             </textarea>
             <p class="text-sm text-gray-500 mt-1">This text will be summarized for the customer invoice.</p>
         </div>
