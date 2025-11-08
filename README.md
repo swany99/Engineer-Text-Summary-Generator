@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -54,7 +54,7 @@
             Engineer Text Summary Generator
         </h1>
         <p class="text-center text-gray-500 mb-8">
-            Generates a professional, structured summary with Symptoms, Cause, and Solution headings.
+            Generates a professional, structured summary with Symptoms, Cause, and Solution headings. **Strictly limited to 470 characters total.**
         </p>
 
         <!-- Input Section -->
@@ -98,7 +98,7 @@ Client reported excessive vibration and high-pitched noise coming from the prima
         // --- CRITICAL STEP FOR YOUR GITHUB PAGES DEPLOYMENT ---
         // 🚨 ACTION REQUIRED: Replace "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY" with your actual key.
         // This key will be visible in the source code.
-        const USER_API_KEY = "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY"; 
+        const USER_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
         
         // --- GEMINI API CONFIGURATION (Direct Call) ---
         const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
@@ -217,7 +217,8 @@ Client reported excessive vibration and high-pitched noise coming from the prima
             hideMessage();
             const userQuery = engineerInput.value.trim();
 
-            if (USER_API_KEY === "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY") {
+            // The fixed check: Ensure the placeholder is replaced
+            if (USER_API_KEY === "YOUR_GEMINI_API_KEY_HERE" || !USER_API_KEY) {
                  showMessage("Error: API Key is missing. Please edit the index.html file and paste your key into the USER_API_KEY variable.");
                  return;
             }
