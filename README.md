@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -98,7 +98,7 @@ Client reported excessive vibration and high-pitched noise coming from the prima
         // --- CRITICAL STEP FOR YOUR GITHUB PAGES DEPLOYMENT ---
         // 🚨 ACTION REQUIRED: Replace "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY" with your actual key.
         // This key will be visible in the source code.
-        const USER_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
+        const USER_API_KEY = "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY"; 
         
         // --- GEMINI API CONFIGURATION (Direct Call) ---
         const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
