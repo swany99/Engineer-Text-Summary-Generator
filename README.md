@@ -54,7 +54,7 @@
             Engineer Text Summary Generator
         </h1>
         <p class="text-center text-gray-500 mb-8">
-            Generates a professional, structured summary with Symptoms, Cause, and Solution headings. **Strictly limited to 470 characters total.**
+            Generates a professional, structured summary with Symptoms, Cause, and Solution headings.
         </p>
 
         <!-- Input Section -->
@@ -96,9 +96,9 @@ Client reported excessive vibration and high-pitched noise coming from the prima
 
     <script>
         // --- CRITICAL STEP FOR YOUR GITHUB PAGES DEPLOYMENT ---
-        // 🚨 ACTION REQUIRED: Replace "YOUR_GEMINI_API_KEY_HERE" with your actual key.
+        // 🚨 ACTION REQUIRED: Replace "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY" with your actual key.
         // This key will be visible in the source code.
-        const USER_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
+        const USER_API_KEY = "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY"; 
         
         // --- GEMINI API CONFIGURATION (Direct Call) ---
         const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
