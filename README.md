@@ -53,7 +53,7 @@
         <h1 class="text-3xl sm:text-4xl font-extrabold text-primary-blue mb-2 text-center">
             Engineer Text Summary Generator
         </h1>
-        <p class="text-center text-gray-500 mb-8">
+        <p class="text-sm text-center text-gray-500 mb-8">
             Generates a professional, structured summary using Symptoms, Cause, and Solution.
         </p>
 
