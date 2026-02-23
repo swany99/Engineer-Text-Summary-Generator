@@ -1,123 +1,43 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Engineer Text Summary Generator</title>
+<script>
+// 🔐 Replace with your restricted browser key (rotate if previously exposed)
+const USER_API_KEY = "YOUR_RESTRICTED_BROWSER_KEY";
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'sans-serif'] },
-          colors: { 'primary-blue': '#1D4ED8', 'secondary-gray': '#E5E7EB' }
-        }
-      }
-    }
-  </script>
-  <style>
-    body { font-family: 'Inter', sans-serif; background-color: #F3F4F6; }
-    .spinner { border-top-color: #3B82F6; animation: spin 1s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
-  </style>
-</head>
-<body class="p-4 sm:p-8">
-  <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-xl p-6 sm:p-10">
-    <h1 class="text-3xl sm:text-4xl font-extrabold text-primary-blue mb-2 text-center">
-      Engineer Text Summary Generator
-    </h1>
-    <p class="text-sm text-center text-gray-500 mb-8">
-      Generates a professional, structured summary using Symptoms, Cause, and Solution.
-    </p>
+// Model and API
+const MODEL_NAME = "gemini-2.5-flash";
+const API_URL = `https://generativelanguage.googleapis.com/v1/models/${MODEL_NAME}:generateContent`;
 
-    <!-- Input -->
-    <div class="mb-6">
-      <label for="engineerInput" class="block text-lg text-center font-medium text-gray-700 mb-2">
-        Input Engineer's Notes
-      </label>
-      <textarea id="engineerInput" rows="8"
-        class="w-full p-4 border border-gray-300 rounded-lg text-center focus:ring-primary-blue focus:border-primary-blue transition duration-150"
-        placeholder="Paste the full, detailed technical report here. For example: 'Client reported excessive vibration ...'"></textarea>
-      <p class="text-sm text-center text-gray-500 mt-1">
-        This text will be analysed and structured for you to copy and paste.
-      </p>
-    </div>
+// Elements
+const engineerInput  = document.getElementById('engineerInput');
+const summaryOutput  = document.getElementById('summaryOutput');
+const generateButton = document.getElementById('generateButton');
+const buttonText     = document.getElementById('buttonText');
+const loadingSpinner = document.getElementById('loadingSpinner');
+const charCount      = document.getElementById('charCount');
+const messageBox     = document.getElementById('messageBox');
+const errorMessage   = document.getElementById('errorMessage');
+const copyMessage    = document.getElementById('copyMessage');
 
-    <!-- Button -->
-    <div class="mb-10 flex justify-center">
-      <button id="generateButton" onclick="generateSummary()"
-        class="flex items-center justify-center bg-primary-blue text-white font-bold py-3 px-8 rounded-xl hover:bg-blue-700 transition duration-300 shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300 active:scale-95">
-        <span id="buttonText">Generate Structured Summary</span>
-        <div id="loadingSpinner" class="hidden spinner h-5 w-5 border-4 border-t-white rounded-full ml-3"></div>
-      </button>
-    </div>
+// Character counter
+summaryOutput.addEventListener('input', updateCharCount);
+summaryOutput.addEventListener('propertychange', updateCharCount);
+window.onload = updateCharCount;
 
-    <!-- Output -->
-    <div>
-      <label for="summaryOutput" class="block text-lg text-center font-medium text-gray-700 mb-2">
-        Invoice Summary
-      </label>
-      <textarea id="summaryOutput" rows="8" readonly
-        class="w-full p-4 border border-green-500 bg-green-50 rounded-lg font-mono text-gray-800 focus:outline-none resize-none"></textarea>
-      <p id="charCount" class="text-sm text-center text-gray-500 mt-1 text-right">
-        Characters: 0 / 470 (Includes headers and spaces)
-      </p>
-      <button onclick="copyToClipboard()"
-        class="mt-2 w-full bg-green-500 text-white font-semibold py-2 rounded-lg hover:bg-green-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-green-300 active:scale-95">
-        Copy to Clipboard
-      </button>
-      <p id="copyMessage" class="text-sm text-center text-green-700 mt-2 opacity-0 transition duration-300">Copied!</p>
-    </div>
+function updateCharCount() {
+  const currentLength = summaryOutput.value.length;
+  charCount.textContent = `Characters: ${currentLength} / 470 (Includes headers and spaces)`;
+  if (currentLength > 470) {
+    charCount.classList.remove('text-gray-500');
+    charCount.classList.add('text-red-500');
+  } else {
+    charCount.classList.add('text-gray-500');
+    charCount.classList.remove('text-red-500');
+  }
+}
 
-    <!-- Error box -->
-    <div id="messageBox" class="mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg hidden" role="alert">
-      <p id="errorMessage" class="font-medium"></p>
-    </div>
+function hideMessage() { messageBox.classList.add('hidden'); }
+function showMessage(message) { errorMessage.textContent = message; messageBox.classList.remove('hidden'); }
 
-    <p class="text-center text-gray-400 text-sm mt-8">Created by Andrew Swan</p>
-  </div>
-
-  <script>
-    // 🔐 Replace with your restricted browser key (rotate if previously exposed)
-    const USER_API_KEY = "YOUR_RESTRICTED_BROWSER_KEY";
-
-    // Model and API
-    const MODEL_NAME = "gemini-2.5-flash";
-    const API_URL = `https://generativelanguage.googleapis.com/v1/models/${MODEL_NAME}:generateContent`;
-
-    // Elements
-    const engineerInput  = document.getElementById('engineerInput');
-    const summaryOutput  = document.getElementById('summaryOutput');
-    const generateButton = document.getElementById('generateButton');
-    const buttonText     = document.getElementById('buttonText');
-    const loadingSpinner = document.getElementById('loadingSpinner');
-    const charCount      = document.getElementById('charCount');
-    const messageBox     = document.getElementById('messageBox');
-    const errorMessage   = document.getElementById('errorMessage');
-    const copyMessage    = document.getElementById('copyMessage');
-
-    summaryOutput.addEventListener('input', updateCharCount);
-    summaryOutput.addEventListener('propertychange', updateCharCount);
-    window.onload = updateCharCount;
-
-    function updateCharCount() {
-      const currentLength = summaryOutput.value.length;
-      charCount.textContent = `Characters: ${currentLength} / 470 (Includes headers and spaces)`;
-      if (currentLength > 470) {
-        charCount.classList.remove('text-gray-500');
-        charCount.classList.add('text-red-500');
-      } else {
-        charCount.classList.add('text-gray-500');
-        charCount.classList.remove('text-red-500');
-      }
-    }
-
-    function hideMessage() { messageBox.classList.add('hidden'); }
-    function showMessage(message) { errorMessage.textContent = message; messageBox.classList.remove('hidden'); }
-
-    const systemPrompt =
+const systemPrompt =
 `You are a professional technical summarization engine for client invoicing. Your task is to analyze detailed engineering reports (mechanical, electrical, or hydraulic) and extract the Symptoms, Cause, and Solution.
 
 You MUST format the output into exactly three separate paragraphs, each preceded by a bold heading and ending with a period. Use the following structure precisely, with two newline characters (\\n\\n) between each section:
@@ -133,158 +53,118 @@ You MUST format the output into exactly three separate paragraphs, each preceded
 
 The total generated text, including the bold headers, paragraphs, and all newlines/spaces, MUST NOT exceed 470 characters in length. This is a strict, hard limit. Prioritize extreme brevity while maintaining professionalism.`;
 
-    // Exponential backoff fetch
-    async function fetchWithBackoff(payload, maxRetries = 3) {
-      for (let i = 0; i < maxRetries; i++) {
-        try {
-          const url = `${API_URL}?key=${USER_API_KEY}`;
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
+// --- Helper: simple fetch (no backoff needed now, but you can keep if you want)
+async function callGemini(payload) {
+  const url = `${API_URL}?key=${USER_API_KEY}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 
-          if (response.status === 401) {
-            throw new Error("API Key Invalid. Please check the key in the source code.");
-          }
-          if (!response.ok) {
-            if (i < maxRetries - 1) {
-              const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-              await new Promise(r => setTimeout(r, delay));
-              continue;
-            }
-            const errorBody = await response.json().catch(() => ({ error: { message: 'Non-JSON error response.' } }));
-            const errMsg = errorBody.error?.message || 'Unknown API error';
-            const err = new Error(`API Request failed with status ${response.status}: ${errMsg}`);
-            err._rawServerMessage = errMsg;
-            throw err;
-          }
+  if (response.status === 401) {
+    throw new Error("API Key Invalid. Please check the key in the source code.");
+  }
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ error: { message: 'Non-JSON error response.' } }));
+    throw new Error(`API Request failed with status ${response.status}: ${errorBody.error?.message || 'Unknown API error'}`);
+  }
 
-          return await response.json();
-        } catch (err) {
-          if (i === maxRetries - 1) throw err;
-          // continue retries
-        }
-      }
+  return await response.json();
+}
+
+// --- Build payload WITHOUT systemInstruction (always inline the prompt)
+function buildPayloadInlineSystem(userText) {
+  const combined = `${systemPrompt}\n\n[Engineer Notes]\n${userText}`;
+  return {
+    contents: [
+      { role: "user", parts: [{ text: combined }] }
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 300,
+      responseMimeType: "text/plain"
     }
+  };
+}
 
-    // Preferred payload: use systemInstruction (if supported)
-    function buildPayloadWithSystemInstruction(userText) {
-      return {
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: "user", parts: [{ text: userText }] }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 300,
-          responseMimeType: "text/plain",
-        },
-      };
-    }
+async function generateSummary() {
+  hideMessage();
+  const userQuery = engineerInput.value.trim();
 
-    // Fallback payload: inline the system prompt into the user message
-    function buildPayloadInlineSystem(userText) {
-      const combined = `${systemPrompt}\n\n[Engineer Notes]\n${userText}`;
-      return {
-        contents: [{ role: "user", parts: [{ text: combined }] }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 300,
-          responseMimeType: "text/plain",
-        },
-      };
-    }
+  if (!USER_API_KEY || USER_API_KEY === "YOUR_GEMINI_API_KEY_HERE" || USER_API_KEY === "YOUR_RESTRICTED_BROWSER_KEY") {
+    showMessage("Error: API Key is missing. Please edit the script and paste your restricted browser key.");
+    return;
+  }
+  if (!userQuery) {
+    showMessage("Please paste the engineer's technical notes into the input box before generating the summary.");
+    return;
+  }
 
-    async function generateSummary() {
-      hideMessage();
-      const userQuery = engineerInput.value.trim();
+  // UI state
+  generateButton.disabled = true;
+  buttonText.classList.add('hidden');
+  loadingSpinner.classList.remove('hidden');
+  summaryOutput.value = "Generating summary...";
+  updateCharCount();
 
-      if (!USER_API_KEY || USER_API_KEY === "YOUR_GEMINI_API_KEY_HERE" || USER_API_KEY === "YOUR_RESTRICTED_BROWSER_KEY") {
-        showMessage("Error: API Key is missing. Please edit the script and paste your restricted browser key.");
-        return;
+  try {
+    const payload = buildPayloadInlineSystem(userQuery);
+    const result = await callGemini(payload);
+
+    const candidate = result.candidates?.[0];
+    if (candidate?.content?.parts?.[0]?.text) {
+      let text = candidate.content.parts[0].text.trim();
+      // Safety guard if the model overshoots 470 chars
+      if (text.length > 470) {
+        const cut = text.lastIndexOf('.', 470);
+        text = text.slice(0, cut > 0 ? cut + 1 : 470);
       }
-      if (!userQuery) {
-        showMessage("Please paste the engineer's technical notes into the input box before generating the summary.");
-        return;
-      }
+      summaryOutput.value = text;
+    } else {
+      if (result.error?.message) throw new Error(`API Error: ${result.error.message}`);
+      throw new Error("Received an unexpected or empty response from the API.");
+    }
+  } catch (error) {
+    console.error("Summary Generation Error:", error);
+    const displayMessage = error.message.includes("API Key Invalid")
+      ? error.message
+      : `Failed to generate summary. Please check your network connection and API key. Details: ${error.message}`;
+    showMessage(displayMessage);
+    summaryOutput.value = "Error generating summary.";
+  } finally {
+    generateButton.disabled = false;
+    buttonText.classList.remove('hidden');
+    loadingSpinner.classList.add('hidden');
+    updateCharCount();
+  }
+}
 
-      // UI state
-      generateButton.disabled = true;
-      buttonText.classList.add('hidden');
-      loadingSpinner.classList.remove('hidden');
-      summaryOutput.value = "Generating summary...";
-      updateCharCount();
-
-      let payload = buildPayloadWithSystemInstruction(userQuery);
-
+// Clipboard helper
+function copyToClipboard() {
+  const textToCopy = summaryOutput.value;
+  if (textToCopy && textToCopy !== "Generating summary..." && textToCopy !== "Error generating summary.") {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        copyMessage.classList.remove('opacity-0');
+        setTimeout(() => copyMessage.classList.add('opacity-0'), 2000);
+      }).catch(err => console.error('Clipboard write failed: ', err));
+    } else {
       try {
-        let result;
-        try {
-          result = await fetchWithBackoff(payload);
-        } catch (err) {
-          const msg = (err._rawServerMessage || "").toLowerCase();
-          // Smart fallback when endpoint/model doesn't accept systemInstruction
-          if (msg.includes('unknown name "systeminstruction"') || msg.includes("cannot find field")) {
-            payload = buildPayloadInlineSystem(userQuery);
-            result = await fetchWithBackoff(payload);
-          } else {
-            throw err;
-          }
-        }
-
-        const candidate = result.candidates?.[0];
-        if (candidate?.content?.parts?.[0]?.text) {
-          let text = candidate.content.parts[0].text.trim();
-          // Soft guard if model overshoots 470 chars
-          if (text.length > 470) {
-            const cut = text.lastIndexOf('.', 470);
-            text = text.slice(0, cut > 0 ? cut + 1 : 470);
-          }
-          summaryOutput.value = text;
-        } else {
-          if (result.error?.message) throw new Error(`API Error: ${result.error.message}`);
-          throw new Error("Received an unexpected or empty response from the API.");
-        }
-      } catch (error) {
-        console.error("Summary Generation Error:", error);
-        const displayMessage = error.message.includes("API Key Invalid")
-          ? error.message
-          : `Failed to generate summary. Please check your network connection and API key. Details: ${error.message}`;
-        showMessage(displayMessage);
-        summaryOutput.value = "Error generating summary.";
-      } finally {
-        generateButton.disabled = false;
-        buttonText.classList.remove('hidden');
-        loadingSpinner.classList.add('hidden');
-        updateCharCount();
+        summaryOutput.select();
+        document.execCommand('copy');
+        copyMessage.classList.remove('opacity-0');
+        setTimeout(() => copyMessage.classList.add('opacity-0'), 2000);
+      } catch (err) {
+        console.error('Could not copy text: ', err);
       }
     }
+  } else {
+    showMessage("Nothing to copy or summary is still generating/in error state.");
+  }
+}
 
-    function copyToClipboard() {
-      const textToCopy = summaryOutput.value;
-      if (textToCopy && textToCopy !== "Generating summary..." && textToCopy !== "Error generating summary.") {
-        if (navigator.clipboard?.writeText) {
-          navigator.clipboard.writeText(textToCopy).then(() => {
-            copyMessage.classList.remove('opacity-0');
-            setTimeout(() => copyMessage.classList.add('opacity-0'), 2000);
-          }).catch(err => console.error('Clipboard write failed: ', err));
-        } else {
-          try {
-            summaryOutput.select();
-            document.execCommand('copy');
-            copyMessage.classList.remove('opacity-0');
-            setTimeout(() => copyMessage.classList.add('opacity-0'), 2000);
-          } catch (err) {
-            console.error('Could not copy text: ', err);
-          }
-        }
-      } else {
-        showMessage("Nothing to copy or summary is still generating/in error state.");
-      }
-    }
-
-    // Expose handlers
-    window.generateSummary = generateSummary;
-    window.copyToClipboard = copyToClipboard;
-  </script>
-</body>
-</html>
+// Expose handlers for onclick
+window.generateSummary = generateSummary;
+window.copyToClipboard = copyToClipboard;
+</script>
