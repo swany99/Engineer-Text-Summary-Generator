@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engineer Text Summary Generator</title>
+</head>
+<body>
+    <h1>Engineer Text Summary Generator</h1>
+    <textarea id="userMessage" placeholder="Enter your message here..."></textarea>
+    <button id="submitBtn">Submit</button>
+    <script>
+        document.getElementById('submitBtn').addEventListener('click', async () => {
+            const userMessage = document.getElementById('userMessage').value;
+            const response = await fetch('https://api.example.com/v1/summarize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: `System prompt: Your system prompt here.\nUser message: ${userMessage}` })
+            });
+            const data = await response.json();
+            alert(data.summary);
+        });
+    </script>
+</body>
+</html>
