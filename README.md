@@ -232,7 +232,7 @@
             summaryOutput.value = "Generating summary...";
             updateCharCount();
 
-            // Reconstruct the final payload for the Gemini API (v1 compatible)
+            // Reconstruct the final payload for the Gemini API (v1 compatible - no systemInstruction)
             const payload = {
                 contents: [{
                     parts: [{
