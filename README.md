@@ -99,7 +99,7 @@
         const USER_API_KEY = "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY"; 
         
         // --- GEMINI API CONFIGURATION (Direct Call) ---
-        const MODEL_NAME = 'gemini-1.5-flash';
+        const model: "gemini-pro";
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`;
 
         // Elements
