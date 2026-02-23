@@ -6,19 +6,27 @@
     <title>Engineer Text Summary Generator</title>
 </head>
 <body>
-    <h1>Engineer Text Summary Generator</h1>
-    <textarea id="userMessage" placeholder="Enter your message here..."></textarea>
-    <button id="submitBtn">Submit</button>
+    <h1>Welcome to Engineer Text Summary Generator</h1>
+    <form id="text-summary-form">
+        <textarea id="input-text" placeholder="Enter text here..." rows="10" cols="50"></textarea><br>
+        <button type="submit">Generate Summary</button>
+    </form>
+    <div id="summary-output"></div>
     <script>
-        document.getElementById('submitBtn').addEventListener('click', async () => {
-            const userMessage = document.getElementById('userMessage').value;
-            const response = await fetch('https://api.example.com/v1/summarize', {
+        document.getElementById('text-summary-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const inputText = document.getElementById('input-text').value;
+            const response = await fetch('https://api.example.com/v1/gemini-2.5-flash', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: `System prompt: Your system prompt here.\nUser message: ${userMessage}` })
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: inputText
+                })
             });
             const data = await response.json();
-            alert(data.summary);
+            document.getElementById('summary-output').innerText = data.summary;
         });
     </script>
 </body>
