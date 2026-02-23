@@ -1,4 +1,3 @@
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -233,12 +232,13 @@
             summaryOutput.value = "Generating summary...";
             updateCharCount();
 
-            // Reconstruct the final payload for the Gemini API
+            // Reconstruct the final payload for the Gemini API (v1 compatible)
             const payload = {
-                contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
+                contents: [{
+                    parts: [{
+                        text: `${systemPrompt}\n\nUser Input:\n${userQuery}`
+                    }]
+                }]
             };
 
             try {
@@ -301,4 +301,3 @@
     </script>
 </body>
 </html>
-
