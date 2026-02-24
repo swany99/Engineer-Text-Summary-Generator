@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Engineer Text Summary Generator</title>
 
-  <!-- ✅ Correct Tailwind CDN include (the earlier snippets missed `src=`) -->
+  <!-- ✅ Correct Tailwind CDN include -->
   <script src="https://cdn.tailwindcss.com"></script>
-
   <script>
     tailwind.config = {
       theme: {
@@ -60,7 +59,7 @@
         <div id="loadingSpinner" class="hidden spinner ml-3"></div>
       </button>
 
-      <!-- 🔎 Wiring test: proves the click handler runs even if API fails -->
+      <!-- Optional wiring test -->
       <button onclick="testClick()"
         class="bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-xl hover:bg-gray-300 transition duration-300">
         Test Button
@@ -100,8 +99,17 @@
 
   <!-- App script -->
   <script>
-    // 🔐 Replace with your restricted browser key (rotate if previously exposed)
-    const USER_API_KEY = "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY";
+    // 🔐🔐🔐 INSERT YOUR GOOGLE GEMINI **BROWSER API KEY** BELOW 🔐🔐🔐
+    // Replace ONLY the string value. Example format: "AIzaSyA...<more>..."
+    const USER_API_KEY = "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY"; // <<< PASTE YOUR KEY HERE
+
+    // (Optional) Quick diagnostic to confirm key is present on the deployed page
+    console.log(
+      "Key status:",
+      (typeof USER_API_KEY === "string" && USER_API_KEY.trim().length > 0)
+        ? `present (${USER_API_KEY.slice(0, 4)}…${USER_API_KEY.slice(-4)})`
+        : "missing"
+    );
 
     // Model and API
     const MODEL_NAME = "gemini-2.5-flash";
@@ -144,7 +152,7 @@
       engineerInput.focus();
     }
 
-    // 🔎 Quick wiring test: should show a message instantly when clicked
+    // 🔎 Quick wiring test (proves click handler runs)
     function testClick() {
       showMessage("Button wiring OK — now paste notes and click Generate.");
       setTimeout(() => hideMessage(), 2000);
@@ -182,6 +190,15 @@ The total generated text, including the bold headers, paragraphs, and all newlin
       };
     }
 
+    // Length-based key guard (friendlier than checking for placeholder strings)
+    function ensureKey() {
+      if (typeof USER_API_KEY !== "string" || USER_API_KEY.trim().length < 30) {
+        showMessage("Error: API Key is missing or too short. Paste a valid browser key in USER_API_KEY.");
+        return false;
+      }
+      return true;
+    }
+
     async function callGemini(payload) {
       const url = `${API_URL}?key=${USER_API_KEY}`;
       const response = await fetch(url, {
@@ -191,7 +208,7 @@ The total generated text, including the bold headers, paragraphs, and all newlin
       });
 
       if (response.status === 401) {
-        throw new Error("API Key Invalid. Please check the key in the source code.");
+        throw new Error("API Key Invalid. Please check the key and referrer restrictions.");
       }
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({ error: { message: 'Non-JSON error response.' } }));
@@ -204,11 +221,8 @@ The total generated text, including the bold headers, paragraphs, and all newlin
       hideMessage();
       const userQuery = engineerInput.value.trim();
 
-      // Guardrails
-      if (!USER_API_KEY || USER_API_KEY === "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY" || USER_API_KEY === "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY") {
-        showMessage("Error: API Key is missing. Please edit the script and paste your restricted browser key.");
-        return;
-      }
+      // ✅ Guardrails
+      if (!ensureKey()) return;
       if (!userQuery) {
         showMessage("Please paste the engineer's technical notes into the input box before generating the summary.");
         return;
@@ -253,7 +267,9 @@ The total generated text, including the bold headers, paragraphs, and all newlin
       }
     }
 
-    function copyToClipboard() {
+    // Expose handlers for inline onclick
+    window.generateSummary = generateSummary;
+    window.copyToClipboard = function copyToClipboard() {
       const textToCopy = summaryOutput.value;
       if (textToCopy && textToCopy !== "Generating summary..." && textToCopy !== "Error generating summary.") {
         if (navigator.clipboard?.writeText) {
@@ -274,11 +290,7 @@ The total generated text, including the bold headers, paragraphs, and all newlin
       } else {
         showMessage("Nothing to copy or summary is still generating/in error state.");
       }
-    }
-
-    // Expose for inline onclick
-    window.generateSummary = generateSummary;
-    window.copyToClipboard = copyToClipboard;
+    };
     window.testClick = testClick;
     window.clearAll = clearAll;
   </script>
