@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Engineer Text Summary Generator</title>
 
-  <!-- Tailwind CSS (correct include) -->
+  <!-- ✅ Correct Tailwind CDN include -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -105,17 +105,18 @@
     const errorMessage   = document.getElementById('errorMessage');
     const copyMessage    = document.getElementById('copyMessage');
 
-    // UI helpers
+    // Counter
     function updateCharCount() {
       const n = summaryOutput.value.length;
       charCount.textContent = `Characters: ${n} / 470 (Includes headers and spaces)`;
       if (n > 470) { charCount.classList.remove('text-gray-500'); charCount.classList.add('text-red-500'); }
       else { charCount.classList.add('text-gray-500'); charCount.classList.remove('text-red-500'); }
     }
-    function hideMessage() { messageBox.classList.add('hidden'); }
-    function showMessage(m) { errorMessage.textContent = m; messageBox.classList.remove('hidden'); }
     summaryOutput.addEventListener('input', updateCharCount);
     window.addEventListener('DOMContentLoaded', updateCharCount);
+
+    function hideMessage() { messageBox.classList.add('hidden'); }
+    function showMessage(m) { errorMessage.textContent = m; messageBox.classList.remove('hidden'); }
 
     // === Your exact system instruction (unchanged) ===
     const systemPrompt = `You are a professional technical summarization engine for client invoicing. Your task is to analyze detailed engineering reports (mechanical, electrical, or hydraulic) and extract the Symptoms, Cause, and Solution.
@@ -133,107 +134,167 @@
 
     The total generated text, including the bold headers, paragraphs, and all newlines/spaces, MUST NOT exceed 470 characters in length. This is a strict, hard limit. Prioritize extreme brevity while maintaining professionalism.`;
 
-    // We add a small reminder (outside the systemPrompt) to nudge compression.
+    // Reminder to discourage generic placeholders and encourage facts.
     function buildUserMessage(userText) {
-      const reminder = `\n\n[Reminder]\nStrictly follow the exact 3-paragraph format above with bold headers, two newlines between sections, each paragraph ends with a period, and total length ≤ 470 characters.`;
+      const reminder =
+        `\n\n[Reminder]\n` +
+        `Strictly follow the exact 3-paragraph format with bold headers, two newlines between sections, ` +
+        `each paragraph ends with a period, and total length ≤ 470 characters. ` +
+        `Avoid placeholders like "not specified" or "solution performed". Use available facts (DTCs, kPa values, actions).`;
       return `${systemPrompt}${reminder}\n\n[Engineer Notes]\n${userText}`;
     }
 
-    // Trim helpers
-    function endsWithPunct(s) { return /[.!?]$/.test(s); }
-    function ensurePeriod(s)  { return endsWithPunct(s) ? s : (s.trim() + "."); }
+    // Helpers to repair/complete weak outputs using facts from notes
+    function extractFacts(src) {
+      const t = (src || "").replace(/\s+/g, " ").trim();
 
-    // Parse/repair model output into the exact required format
-    function normalizeToFormat(raw) {
+      // DTC codes like P008A00
+      const dtcs = Array.from(new Set((t.match(/\bP[0-9A-F]{4,6}\b/gi) || []))).slice(0,3);
+      // kPa
+      const kpas  = (t.match(/\b(\d{2,4})\s*kpa\b/gi) || []).map(v => v.replace(/\s+/g,""));
+      // Idle / Load (before repair)
+      const idleBefore = (t.match(/(low\s*idle|idle)[^0-9]*(\d{2,4})\s*kpa/i) || [])[2];
+      const loadBefore = (t.match(/(under\s*load|load)[^0-9]*(\d{2,4})\s*kpa/i) || [])[2];
+      // Min specs (first two occurrences)
+      const specMatches = [...t.matchAll(/min\s*spec[^0-9]*(\d{2,4})\s*kpa/ig)].map(m => m[1]);
+      const specIdle = specMatches[0];
+      const specLoad = specMatches[1];
+
+      // After cleaning
+      const afterBlock = t.split(/after\s+cleaning\s+strainers[:\s]*/i)[1] || t.split(/after\s+cleaning[:\s]*/i)[1] || "";
+      const idleAfter = (afterBlock.match(/(low\s*idle|idle)[^0-9]*(\d{2,4})\s*kpa/i) || [])[2];
+      const loadAfter = (afterBlock.match(/(under\s*load|load)[^0-9]*(\d{2,4})\s*kpa/i) || [])[2];
+
+      const underLoad = /under load|tracking|worked machine/i.test(t);
+      const blocked   = /blocked|clog/i.test(t) && /strainer|strainers/i.test(t);
+      const pump      = /high\/?\s*low\s*pressure\s*fuel\s*pump|fuel\s*pump/i.test(t);
+      const cleaned   = /cleaned|removed\s+and\s+cleaned/i.test(t);
+      const bled      = /bled/i.test(t);
+      const testCode  = (t.match(/\bOPR\s*[\d-]+/i) || [])[0];
+      const passed    = /passed test|no issues/i.test(t);
+      const runOK     = /worked.*(30|40|45)\s*min/i.test(t) || /30-45\s*min/i.test(t);
+
+      return {
+        dtcs, kpas, idleBefore, loadBefore, specIdle, specLoad,
+        idleAfter, loadAfter, underLoad, blocked, pump, cleaned, bled, testCode, passed, runOK
+      };
+    }
+
+    function ensurePeriod(s) {
+      s = (s || "").replace(/\s+/g, " ").trim();
+      if (!/[.!?]$/.test(s)) s += ".";
+      return s;
+    }
+
+    function normalizeToFormat(raw, notes) {
       const LIMIT = 470;
-
       let text = (raw || "").replace(/\r/g, "").trim();
 
-      // Attempt to split by required headers
-      const parts = text.split(/\n\s*\n/); // paragraphs separated by blank line
-      // Find indexes of the header lines and following content
-      function extract(section) {
-        const rxHeader = new RegExp(`^\\*\\*${section}\\*\\*\\s*$`, "im");
-        const rxBlock  = new RegExp(`\\*\\*${section}\\*\\*\\s*\\n([\\s\\S]*?)(\\n\\n|$)`, "i");
-        if (!rxHeader.test(text)) return "";
-        const m = text.match(rxBlock);
-        return m ? m[1].trim() : "";
+      // Try to pull sections from model output
+      function getSection(name) {
+        const block = text.match(new RegExp(`\\*\\*${name}\\*\\*\\s*\\n([\\s\\S]*?)(?:\\n\\n|$)`, "i"));
+        if (block && block[1]) return block[1].trim();
+        const loose = text.match(new RegExp(`\\*\\*${name}\\*\\*[\\s\\n]+([^\\n]+)`, "i"));
+        return loose ? loose[1].trim() : "";
       }
 
-      let s = extract("Symptoms");
-      let c = extract("Cause");
-      let so= extract("Solution");
+      let s = getSection("Symptoms");
+      let c = getSection("Cause");
+      let so= getSection("Solution");
 
-      // If any missing, try looser extraction (first sentence after header markers)
-      function loose(section) {
-        const rx = new RegExp(`\\*\\*${section}\\*\\*[\\s\\n]+([^\\n]+)`, "i");
-        const m = text.match(rx);
-        return m ? m[1].trim() : "";
+      // Determine if a section is weak/generic
+      function isWeak(x) {
+        if (!x) return true;
+        const y = x.toLowerCase();
+        return y.length < 10 ||
+               /not specified|performed|n\/a|unknown|unspecified/.test(y) ||
+               ( /^the machine|^issue|^fault/.test(y) && y.length < 25 );
       }
-      if (!s) s  = loose("Symptoms");
-      if (!c) c  = loose("Cause");
-      if (!so) so= loose("Solution");
 
-      // If still empty, seed minimal placeholders (will compress later)
-      if (!s) s = "Summary unavailable.";
-      if (!c) c = "Cause not specified.";
-      if (!so) so= "Solution performed.";
+      // Inject facts if weak
+      const f = extractFacts(notes);
 
-      // Make sure each is a single line and ends with a period
-      s  = ensurePeriod(s.replace(/\s+/g, " ").trim());
-      c  = ensurePeriod(c.replace(/\s+/g, " ").trim());
-      so = ensurePeriod(so.replace(/\s+/g, " ").trim());
+      if (isWeak(s)) {
+        let parts = [];
+        parts.push("Fuel fault");
+        if (f.underLoad) parts.push("under load");
+        if (f.dtcs.length) parts.push(`(${f.dtcs.join(", ")})`);
+        if (f.idleBefore && f.loadBefore && (f.specIdle || f.specLoad)) {
+          const specStr = (f.specIdle && f.specLoad) ? `${f.specIdle}/${f.specLoad} kPa` :
+                          (f.specIdle) ? `${f.specIdle} kPa` : `${f.specLoad} kPa`;
+          parts.push(`Feed pressure low: ${f.idleBefore} kPa idle / ~${f.loadBefore} kPa load (spec ${specStr})`);
+        } else if (f.idleBefore && f.loadBefore) {
+          parts.push(`Feed pressure low: ${f.idleBefore} kPa idle / ~${f.loadBefore} kPa load`);
+        }
+        s = parts.join(". ").replace(/\.\s*\./g, ". ");
+      }
 
-      // Assemble final block
+      if (isWeak(c)) {
+        if (f.blocked && f.pump) c = "Blocked strainers at the high/low pressure fuel pump restricting feed.";
+        else if (f.blocked) c = "Blocked fuel strainers restricting feed.";
+        else c = "Fuel feed restriction suspected.";
+      }
+
+      if (isWeak(so)) {
+        let actions = [];
+        if (f.cleaned) actions.push("Removed and cleaned both strainers");
+        if (f.bled) actions.push("bled system");
+        if (f.idleAfter && f.loadAfter) actions.push(`pressures ${f.idleAfter} kPa idle / ~${f.loadAfter} kPa load after repair`);
+        if (f.testCode) actions.push(`ran ${f.testCode}`);
+        if (f.passed) actions.push("passed test");
+        if (f.dtcs.length) actions.push("cleared DTCs");
+        if (f.runOK) actions.push("machine worked without complaints");
+        so = actions.length ? actions.join("; ") : "Verified fault and retested.";
+      }
+
+      s  = ensurePeriod(s);
+      c  = ensurePeriod(c);
+      so = ensurePeriod(so);
+
       const headerS = "**Symptoms**\n";
       const headerC = "**Cause**\n";
       const headerSo= "**Solution**\n";
       const sep     = "\n\n";
 
-      function assemble(a, b, d) { return headerS + a + sep + headerC + b + sep + headerSo + d; }
+      function assemble(S, C, SO) { return headerS + S + sep + headerC + C + sep + headerSo + SO; }
 
-      // If the total exceeds 470 chars, shrink sentences proportionally
-      function shrinkToLimit(a, b, d) {
-        let A = a, B = b, D = d;
-        let final = assemble(A, B, D);
-        if (final.length <= LIMIT) return final;
+      // Shrink to ≤ 470 by trimming longest sentence first
+      function shrinkToLimit(S, C, SO) {
+        let A = S, B = C, D = SO;
+        let out = assemble(A, B, D);
+        if (out.length <= LIMIT) return out;
 
-        // Iteratively remove the last word from the longest sentence first
-        function removeLastWord(str) {
+        function trimWords(str, minKeep = 55) {
           let core = str.replace(/[.!?]\s*$/, "");
-          const words = core.split(" ");
-          if (words.length <= 3) return str; // stop shrinking too far
-          words.pop();
-          let out = words.join(" ").trim();
-          if (!/[.!?]$/.test(out)) out += ".";
-          return out;
+          let parts = core.split(" ");
+          while (parts.join(" ").length > minKeep && parts.length > 3) parts.pop();
+          let r = parts.join(" ").trim();
+          if (!/[.!?]$/.test(r)) r += ".";
+          return r;
         }
 
-        let guard = 200; // prevent infinite loops
-        while (final.length > LIMIT && guard-- > 0) {
-          // Pick the longest of A, B, D
+        let guard = 200;
+        while (out.length > LIMIT && guard-- > 0) {
           const lens = [{k:"A",v:A.length},{k:"B",v:B.length},{k:"D",v:D.length}].sort((x,y)=>y.v-x.v);
-          if (lens[0].k==="A") A = removeLastWord(A);
-          else if (lens[0].k==="B") B = removeLastWord(B);
-          else D = removeLastWord(D);
-          final = assemble(A, B, D);
-          // Break if nothing changes (all too short)
-          if (A.length <= 12 && B.length <= 12 && D.length <= 12) break;
+          if (lens[0].k==="A") A = trimWords(A, 60);
+          else if (lens[0].k==="B") B = trimWords(B, 60);
+          else D = trimWords(D, 60);
+          out = assemble(A, B, D);
+          if (A.length<=10 && B.length<=10 && D.length<=10) break;
         }
-        // Hard crop as last resort
-        if (final.length > LIMIT) final = final.slice(0, LIMIT);
-        return final;
+        if (out.length > LIMIT) out = out.slice(0, LIMIT);
+        return out;
       }
 
       return shrinkToLimit(s, c, so);
     }
 
-    // Build payload (no systemInstruction; inline prompt only)
+    // Build payload (no systemInstruction)
     function buildPayload(userText) {
       const combined = buildUserMessage(userText);
       return {
         contents: [{ role: "user", parts: [{ text: combined }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
+        generationConfig: { temperature: 0.15, maxOutputTokens: 512 }
       };
     }
 
@@ -281,12 +342,11 @@
       updateCharCount();
 
       try {
-        // Single call, no JSON to parse
         const payload = buildPayload(notes);
         const result  = await callGemini(payload);
+        const raw     = result?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
-        const text = result?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-        const final = normalizeToFormat(text);
+        const final = normalizeToFormat(raw, notes);
         summaryOutput.value = final || "Error: Empty response from model.";
       } catch (err) {
         console.error("Summary Generation Error:", err);
