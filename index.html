@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Engineer Text Summary Generator</title>
 
-  <!-- ✅ Correct Tailwind CDN include -->
+  <!-- Tailwind CSS (correct include) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -39,7 +39,7 @@
       Generates a professional, structured summary using Symptoms, Cause, and Solution.
     </p>
 
-    <!-- Input Section -->
+    <!-- Input -->
     <div class="mb-6">
       <label for="engineerInput" class="block text-lg text-center font-medium text-gray-700 mb-2">
         Input Engineer's Notes
@@ -61,7 +61,7 @@
       </button>
     </div>
 
-    <!-- Output Section -->
+    <!-- Output -->
     <div>
       <label for="summaryOutput" class="block text-lg text-center font-medium text-gray-700 mb-2">
         Invoice Summary
@@ -78,7 +78,7 @@
       <p id="copyMessage" class="text-sm text-center text-green-700 mt-2 opacity-0 transition duration-300">Copied!</p>
     </div>
 
-    <!-- Error/Message Box -->
+    <!-- Error box -->
     <div id="messageBox" class="mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg hidden" role="alert">
       <p id="errorMessage" class="font-medium"></p>
     </div>
@@ -88,7 +88,7 @@
 
   <script>
     // 🔐 PASTE YOUR GOOGLE GEMINI **BROWSER API KEY** HERE (referrer-restricted)
-    const USER_API_KEY = "AIzaSyCPdNJWy2xxCftu1ePgj-W3F1e48lYcLas"; // <<< REPLACE WITH YOUR REAL KEY
+    const USER_API_KEY = "AIzaSyCPdNJWy2xxCftu1ePgj-W3F1e48lYcLas"; // <<< REPLACE THIS
 
     // Model & API (GL API v1, inline prompt only)
     const MODEL_NAME = "gemini-2.5-flash";
@@ -109,215 +109,135 @@
     function updateCharCount() {
       const n = summaryOutput.value.length;
       charCount.textContent = `Characters: ${n} / 470 (Includes headers and spaces)`;
-      if (n > 470) {
-        charCount.classList.remove('text-gray-500'); charCount.classList.add('text-red-500');
-      } else {
-        charCount.classList.add('text-gray-500'); charCount.classList.remove('text-red-500');
-      }
+      if (n > 470) { charCount.classList.remove('text-gray-500'); charCount.classList.add('text-red-500'); }
+      else { charCount.classList.add('text-gray-500'); charCount.classList.remove('text-red-500'); }
     }
     function hideMessage() { messageBox.classList.add('hidden'); }
     function showMessage(m) { errorMessage.textContent = m; messageBox.classList.remove('hidden'); }
     summaryOutput.addEventListener('input', updateCharCount);
     window.addEventListener('DOMContentLoaded', updateCharCount);
 
-    // === Your exact final output format ===
-    // **Symptoms**
-    // <sentence>.
-    //
-    // **Cause**
-    // <sentence>.
-    //
-    // **Solution**
-    // <sentence>.
-    // Total ≤ 470 chars.
+    // === Your exact system instruction (unchanged) ===
+    const systemPrompt = `You are a professional technical summarization engine for client invoicing. Your task is to analyze detailed engineering reports (mechanical, electrical, or hydraulic) and extract the Symptoms, Cause, and Solution.
 
-    // ===== Function-calling instruction =====
-    // Ask Gemini to ONLY call a function with the structured result.
-    function buildFunctionCallPrompt(userText) {
-      return `
-You are a professional technical summarization engine for client invoicing.
+    You MUST format the output into exactly three separate paragraphs, each preceded by a bold heading and ending with a period. Use the following structure precisely, with two newline characters (\\n\\n) between each section:
 
-Read the engineer notes and return three ultra-concise, single-sentence fields:
-- symptoms
-- cause
-- solution
+    **Symptoms**
+    [A professional, concise summary of the symptom(s).]
 
-Constraints (must be enforced):
-- One sentence per field.
-- Each field ≤ 120 characters.
-- Be extremely concise; abbreviate units (e.g., kPa); only the most essential DTC if vital.
+    **Cause**
+    [A professional, concise summary of the cause identified.]
 
-Respond ONLY by calling the function 'summarize_invoice' with arguments:
-  symptoms: string
-  cause: string
-  solution: string
+    **Solution**
+    [A professional, concise summary of the remedy applied.]
 
-No extra text.
+    The total generated text, including the bold headers, paragraphs, and all newlines/spaces, MUST NOT exceed 470 characters in length. This is a strict, hard limit. Prioritize extreme brevity while maintaining professionalism.`;
 
-[Engineer Notes]
-${userText}`.trim();
+    // We add a small reminder (outside the systemPrompt) to nudge compression.
+    function buildUserMessage(userText) {
+      const reminder = `\n\n[Reminder]\nStrictly follow the exact 3-paragraph format above with bold headers, two newlines between sections, each paragraph ends with a period, and total length ≤ 470 characters.`;
+      return `${systemPrompt}${reminder}\n\n[Engineer Notes]\n${userText}`;
     }
 
-    // Build payload with function declaration (tools). No systemInstruction.
-    function buildPayloadFunctionCall(userText) {
-      const combined = buildFunctionCallPrompt(userText);
-      return {
-        contents: [{ role: "user", parts: [{ text: combined }] }],
-        tools: [{
-          function_declarations: [{
-            name: "summarize_invoice",
-            description: "Return ultra-brief invoice-ready summary, one sentence per field.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                symptoms: { type: "STRING", description: "One sentence symptoms, ≤120 chars." },
-                cause:    { type: "STRING", description: "One sentence root cause, ≤120 chars." },
-                solution: { type: "STRING", description: "One sentence solution/remedy, ≤120 chars." }
-              },
-              required: ["symptoms", "cause", "solution"]
-            }
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.05,
-          maxOutputTokens: 256
-        }
-      };
-    }
+    // Trim helpers
+    function endsWithPunct(s) { return /[.!?]$/.test(s); }
+    function ensurePeriod(s)  { return endsWithPunct(s) ? s : (s.trim() + "."); }
 
-    // Fallback prompt to get raw JSON (if function call is not returned)
-    function buildJsonPrompt(userText) {
-      return `
-Return ONLY minified JSON with three single-sentence values (no markdown, no preamble):
-{"symptoms":"...","cause":"...","solution":"..."}
+    // Parse/repair model output into the exact required format
+    function normalizeToFormat(raw) {
+      const LIMIT = 470;
 
-Rules:
-- One sentence per value, ≤ 120 characters.
-- Be ultra-concise; abbreviate units; include only essential DTC if vital.
+      let text = (raw || "").replace(/\r/g, "").trim();
 
-[Engineer Notes]
-${userText}`.trim();
-    }
-    function buildPayloadJSON(userText) {
-      const combined = buildJsonPrompt(userText);
-      return {
-        contents: [{ role: "user", parts: [{ text: combined }] }],
-        generationConfig: { temperature: 0.05, maxOutputTokens: 256 }
-      };
-    }
+      // Attempt to split by required headers
+      const parts = text.split(/\n\s*\n/); // paragraphs separated by blank line
+      // Find indexes of the header lines and following content
+      function extract(section) {
+        const rxHeader = new RegExp(`^\\*\\*${section}\\*\\*\\s*$`, "im");
+        const rxBlock  = new RegExp(`\\*\\*${section}\\*\\*\\s*\\n([\\s\\S]*?)(\\n\\n|$)`, "i");
+        if (!rxHeader.test(text)) return "";
+        const m = text.match(rxBlock);
+        return m ? m[1].trim() : "";
+      }
 
-    // Helpers: parse function call / JSON
-    function getFunctionCall(result) {
-      try {
-        const parts = result?.candidates?.[0]?.content?.parts || [];
-        for (const p of parts) {
-          if (p.functionCall && p.functionCall.name === "summarize_invoice") {
-            return p.functionCall;
-          }
-        }
-      } catch {}
-      return null;
-    }
-    function safeParseJsonFromText(text) {
-      if (!text) return null;
-      const t = text.trim();
-      try { return JSON.parse(t); } catch {}
-      const fence = t.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-      try { return JSON.parse(fence); } catch {}
-      const m = t.match(/\{[\s\S]*\}/);
-      if (m) { try { return JSON.parse(m[0]); } catch {} }
-      return null;
-    }
+      let s = extract("Symptoms");
+      let c = extract("Cause");
+      let so= extract("Solution");
 
-    // Ensure sentence ends and fits
-    function cleanSentence(s, maxLen) {
-      if (!s) return "";
-      let out = s.replace(/\s+/g, " ").trim();
-      if (out.length > maxLen) out = out.slice(0, maxLen).trim();
-      out = out.replace(/[;,:-]\s*$/g, "").trim();
-      if (!/[.!?]$/.test(out)) out += ".";
-      return out;
-    }
+      // If any missing, try looser extraction (first sentence after header markers)
+      function loose(section) {
+        const rx = new RegExp(`\\*\\*${section}\\*\\*[\\s\\n]+([^\\n]+)`, "i");
+        const m = text.match(rx);
+        return m ? m[1].trim() : "";
+      }
+      if (!s) s  = loose("Symptoms");
+      if (!c) c  = loose("Cause");
+      if (!so) so= loose("Solution");
 
-    // Final formatting (bold headers, 3 paragraphs, ≤470)
-    function buildFinalText(symptoms, cause, solution) {
+      // If still empty, seed minimal placeholders (will compress later)
+      if (!s) s = "Summary unavailable.";
+      if (!c) c = "Cause not specified.";
+      if (!so) so= "Solution performed.";
+
+      // Make sure each is a single line and ends with a period
+      s  = ensurePeriod(s.replace(/\s+/g, " ").trim());
+      c  = ensurePeriod(c.replace(/\s+/g, " ").trim());
+      so = ensurePeriod(so.replace(/\s+/g, " ").trim());
+
+      // Assemble final block
       const headerS = "**Symptoms**\n";
       const headerC = "**Cause**\n";
       const headerSo= "**Solution**\n";
       const sep     = "\n\n";
-      const LIMIT   = 470;
 
-      let s  = cleanSentence(symptoms, 140);
-      let c  = cleanSentence(cause,    140);
-      let so = cleanSentence(solution, 140);
+      function assemble(a, b, d) { return headerS + a + sep + headerC + b + sep + headerSo + d; }
 
-      function assemble() {
-        return headerS + s + sep + headerC + c + sep + headerSo + so;
-      }
+      // If the total exceeds 470 chars, shrink sentences proportionally
+      function shrinkToLimit(a, b, d) {
+        let A = a, B = b, D = d;
+        let final = assemble(A, B, D);
+        if (final.length <= LIMIT) return final;
 
-      let final = assemble();
-      if (final.length <= LIMIT) return final;
-
-      // Proportional shrink (trim words from the longest first)
-      let parts = [
-        { key: "s",  val: s  },
-        { key: "c",  val: c  },
-        { key: "so", val: so }
-      ].sort((a,b)=>b.val.length - a.val.length);
-
-      function trimWords(str, minKeep = 50) {
-        let core = str.replace(/[.!?]\s*$/,"");
-        let words = core.split(" ");
-        while (words.join(" ").length > minKeep && words.length > 3) {
+        // Iteratively remove the last word from the longest sentence first
+        function removeLastWord(str) {
+          let core = str.replace(/[.!?]\s*$/, "");
+          const words = core.split(" ");
+          if (words.length <= 3) return str; // stop shrinking too far
           words.pop();
+          let out = words.join(" ").trim();
+          if (!/[.!?]$/.test(out)) out += ".";
+          return out;
         }
-        let out = words.join(" ").trim();
-        if (!/[.!?]$/.test(out)) out += ".";
-        return out;
+
+        let guard = 200; // prevent infinite loops
+        while (final.length > LIMIT && guard-- > 0) {
+          // Pick the longest of A, B, D
+          const lens = [{k:"A",v:A.length},{k:"B",v:B.length},{k:"D",v:D.length}].sort((x,y)=>y.v-x.v);
+          if (lens[0].k==="A") A = removeLastWord(A);
+          else if (lens[0].k==="B") B = removeLastWord(B);
+          else D = removeLastWord(D);
+          final = assemble(A, B, D);
+          // Break if nothing changes (all too short)
+          if (A.length <= 12 && B.length <= 12 && D.length <= 12) break;
+        }
+        // Hard crop as last resort
+        if (final.length > LIMIT) final = final.slice(0, LIMIT);
+        return final;
       }
 
-      let over = final.length - LIMIT;
-      for (let i = 0; i < parts.length && over > 0; i++) {
-        const before = parts[i].val.length;
-        parts[i].val = trimWords(parts[i].val, 60);
-        over -= Math.max(0, before - parts[i].val.length);
-      }
-      s  = parts.find(p=>p.key==="s").val;
-      c  = parts.find(p=>p.key==="c").val;
-      so = parts.find(p=>p.key==="so").val;
-
-      final = assemble();
-      if (final.length > LIMIT) final = final.slice(0, LIMIT); // last resort
-      return final;
+      return shrinkToLimit(s, c, so);
     }
 
-    // Heuristic fallback (extract minimal signals from user text)
-    function heuristicFromNotes(src) {
-      const text = (src || "").replace(/\s+/g, " ").trim();
-      const dtcs = Array.from(new Set((text.match(/\bP[0-9A-F]{4,5}\b/gi) || []))).slice(0,3);
-      const kpas = (text.match(/\b(\d{2,4})\s*kpa\b/gi) || []).map(v => v.replace(/\s+/g,""));
-      const lowP = kpas.find(v => parseInt(v) < 400);
-      const underLoad = /under load|tracking|worked machine/i.test(text);
-      const fuel = /fuel|strainer|filter|pump/i.test(text);
-      const fix = (text.match(/\b(replaced|cleaned|fitted|verified|tested|flushed|reset|updated|aligned|retightened|retorqued)\b/gi) || [])[0];
-
-      let symptoms = fuel ? "Fuel fault reported" : "Issue reported";
-      if (underLoad) symptoms += " under load";
-      if (dtcs.length) symptoms += `; codes ${dtcs.join(", ")}`;
-      symptoms += ".";
-
-      let cause = lowP
-        ? `Low feed pressure (e.g., ${lowP}) vs spec.`
-        : (/blocked|clog|leak|air/i.test(text) ? "Restriction/air ingress suspected." : "Cause under investigation.");
-
-      let solution = fix
-        ? `${fix.charAt(0).toUpperCase()+fix.slice(1)} components/filters and retested.`
-        : (/tested|verified/i.test(text) ? "Verified with gauge/TT and retested." : "Verified fault and tested.");
-
-      return { symptoms, cause, solution };
+    // Build payload (no systemInstruction; inline prompt only)
+    function buildPayload(userText) {
+      const combined = buildUserMessage(userText);
+      return {
+        contents: [{ role: "user", parts: [{ text: combined }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
+      };
     }
 
-    // Key & API
+    // Key guard
     function ensureKey() {
       if (typeof USER_API_KEY !== "string" || USER_API_KEY.trim().length < 30) {
         showMessage("Error: API Key is missing or too short. Paste a valid browser key in USER_API_KEY.");
@@ -325,6 +245,8 @@ ${userText}`.trim();
       }
       return true;
     }
+
+    // API call
     async function callGemini(payload) {
       const url = `${API_URL}?key=${USER_API_KEY}`;
       const res = await fetch(url, {
@@ -332,7 +254,7 @@ ${userText}`.trim();
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (res.status === 401) throw new Error("API Key Invalid. Check the key and referrer restrictions.");
+      if (res.status === 401) throw new Error("API Key Invalid. Check key & referrer restrictions.");
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: { message: 'Non-JSON error response.' } }));
         throw new Error(`API Request failed with status ${res.status}: ${body.error?.message || 'Unknown API error'}`);
@@ -343,15 +265,15 @@ ${userText}`.trim();
     // Main
     async function generateSummary() {
       hideMessage();
-      const userText = engineerInput.value.trim();
+      const notes = engineerInput.value.trim();
 
       if (!ensureKey()) return;
-      if (!userText || /^paste engineers text here$/i.test(userText)) {
+      if (!notes || /^paste engineers text here$/i.test(notes)) {
         showMessage("Please paste the engineer's technical notes into the input box before generating the summary.");
         return;
       }
 
-      // UI: loading
+      // UI
       generateButton.disabled = true;
       buttonText.classList.add('hidden');
       loadingSpinner.classList.remove('hidden');
@@ -359,44 +281,13 @@ ${userText}`.trim();
       updateCharCount();
 
       try {
-        // 1) Prefer function calling
-        let payload = buildPayloadFunctionCall(userText);
-        let result  = await callGemini(payload);
-        let fc      = getFunctionCall(result);
+        // Single call, no JSON to parse
+        const payload = buildPayload(notes);
+        const result  = await callGemini(payload);
 
-        // 2) If no functionCall, try minified JSON
-        if (!fc) {
-          const payloadJson = buildPayloadJSON(userText);
-          const resultJson  = await callGemini(payloadJson);
-          const textJson    = resultJson?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-          const data        = safeParseJsonFromText(textJson);
-
-          if (data && data.symptoms && data.cause && data.solution) {
-            const finalText = buildFinalText(data.symptoms, data.cause, data.solution);
-            summaryOutput.value = finalText;
-          } else {
-            // 3) Heuristic last resort from notes (never fails)
-            const h = heuristicFromNotes(userText);
-            summaryOutput.value = buildFinalText(h.symptoms, h.cause, h.solution);
-          }
-        } else {
-          // Parse arguments from function call (Gemini gives object args)
-          let args = fc.args;
-          // Some variants might encode args as string; try to parse if needed
-          if (typeof args === "string") {
-            try { args = JSON.parse(args); } catch {}
-          }
-
-          if (args && args.symptoms && args.cause && args.solution) {
-            const finalText = buildFinalText(args.symptoms, args.cause, args.solution);
-            summaryOutput.value = finalText;
-          } else {
-            // If somehow incomplete, fallback to heuristic
-            const h = heuristicFromNotes(userText);
-            summaryOutput.value = buildFinalText(h.symptoms, h.cause, h.solution);
-          }
-        }
-
+        const text = result?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        const final = normalizeToFormat(text);
+        summaryOutput.value = final || "Error: Empty response from model.";
       } catch (err) {
         console.error("Summary Generation Error:", err);
         const msg = err.message.includes("API Key Invalid")
@@ -412,6 +303,7 @@ ${userText}`.trim();
       }
     }
 
+    // Copy
     function copyToClipboard() {
       const val = summaryOutput.value;
       if (val && val !== "Generating summary..." && val !== "Error generating summary.") {
@@ -433,7 +325,7 @@ ${userText}`.trim();
       }
     }
 
-    // Expose for onclick
+    // Expose
     window.generateSummary = generateSummary;
     window.copyToClipboard = copyToClipboard;
   </script>
