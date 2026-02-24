@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Engineer Text Summary Generator</title>
 
-  <!-- ✅ Correct Tailwind CDN include -->
+  <!-- ✅ Correct Tailwind CDN include (the earlier snippets missed `src=`) -->
   <script src="https://cdn.tailwindcss.com"></script>
+
   <script>
     tailwind.config = {
       theme: {
@@ -19,7 +20,13 @@
   </script>
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #F3F4F6; }
-    .spinner { border: 4px solid rgba(0,0,0,0.1); border-top-color: #3B82F6; animation: spin 1s linear infinite; }
+    .spinner {
+      border: 4px solid rgba(0,0,0,0.1);
+      border-top-color: #3B82F6;
+      border-radius: 9999px;
+      width: 20px; height: 20px;
+      animation: spin 1s linear infinite;
+    }
     @keyframes spin { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
   </style>
 </head>
@@ -45,12 +52,18 @@
       </p>
     </div>
 
-    <!-- Button -->
-    <div class="mb-10 flex justify-center">
+    <!-- Buttons -->
+    <div class="mb-4 flex justify-center gap-3">
       <button id="generateButton" onclick="generateSummary()"
         class="flex items-center justify-center bg-primary-blue text-white font-bold py-3 px-8 rounded-xl hover:bg-blue-700 transition duration-300 shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300 active:scale-95">
         <span id="buttonText">Generate Structured Summary</span>
-        <div id="loadingSpinner" class="hidden spinner h-5 w-5 rounded-full ml-3"></div>
+        <div id="loadingSpinner" class="hidden spinner ml-3"></div>
+      </button>
+
+      <!-- 🔎 Wiring test: proves the click handler runs even if API fails -->
+      <button onclick="testClick()"
+        class="bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-xl hover:bg-gray-300 transition duration-300">
+        Test Button
       </button>
     </div>
 
@@ -64,10 +77,16 @@
       <p id="charCount" class="text-sm text-right text-gray-500 mt-1">
         Characters: 0 / 470 (Includes headers and spaces)
       </p>
-      <button onclick="copyToClipboard()"
-        class="mt-2 w-full bg-green-500 text-white font-semibold py-2 rounded-lg hover:bg-green-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-green-300 active:scale-95">
-        Copy to Clipboard
-      </button>
+      <div class="flex gap-3">
+        <button onclick="copyToClipboard()"
+          class="mt-2 w-full bg-green-500 text-white font-semibold py-2 rounded-lg hover:bg-green-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-green-300 active:scale-95">
+          Copy to Clipboard
+        </button>
+        <button onclick="clearAll()"
+          class="mt-2 w-40 bg-gray-200 text-gray-800 font-semibold py-2 rounded-lg hover:bg-gray-300 transition duration-300">
+          Clear
+        </button>
+      </div>
       <p id="copyMessage" class="text-sm text-center text-green-700 mt-2 opacity-0 transition duration-300">Copied!</p>
     </div>
 
@@ -79,14 +98,14 @@
     <p class="text-center text-gray-400 text-sm mt-8">Created by Andrew Swan</p>
   </div>
 
-  <!-- ✅ App script (kept as plain script so onclick finds functions in global scope) -->
+  <!-- App script -->
   <script>
     // 🔐 Replace with your restricted browser key (rotate if previously exposed)
     const USER_API_KEY = "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY";
 
     // Model and API
     const MODEL_NAME = "gemini-2.5-flash";
-    const API_URL = \`https://generativelanguage.googleapis.com/v1/models/\${MODEL_NAME}:generateContent\`;
+    const API_URL = `https://generativelanguage.googleapis.com/v1/models/${MODEL_NAME}:generateContent`;
 
     // Elements
     const engineerInput  = document.getElementById('engineerInput');
@@ -102,7 +121,7 @@
     // Character counter
     function updateCharCount() {
       const currentLength = summaryOutput.value.length;
-      charCount.textContent = \`Characters: \${currentLength} / 470 (Includes headers and spaces)\`;
+      charCount.textContent = `Characters: ${currentLength} / 470 (Includes headers and spaces)`;
       if (currentLength > 470) {
         charCount.classList.remove('text-gray-500');
         charCount.classList.add('text-red-500');
@@ -116,6 +135,20 @@
 
     function hideMessage() { messageBox.classList.add('hidden'); }
     function showMessage(message) { errorMessage.textContent = message; messageBox.classList.remove('hidden'); }
+
+    function clearAll() {
+      engineerInput.value = "";
+      summaryOutput.value = "";
+      hideMessage();
+      updateCharCount();
+      engineerInput.focus();
+    }
+
+    // 🔎 Quick wiring test: should show a message instantly when clicked
+    function testClick() {
+      showMessage("Button wiring OK — now paste notes and click Generate.");
+      setTimeout(() => hideMessage(), 2000);
+    }
 
     // System prompt embedded into the user message (no systemInstruction used)
     const systemPrompt =
@@ -136,7 +169,7 @@ The total generated text, including the bold headers, paragraphs, and all newlin
 
     // Build payload WITHOUT systemInstruction (inline prompt)
     function buildPayloadInlineSystem(userText) {
-      const combined = \`\${systemPrompt}\n\n[Engineer Notes]\n\${userText}\`;
+      const combined = `${systemPrompt}\n\n[Engineer Notes]\n${userText}`;
       return {
         contents: [
           { role: "user", parts: [{ text: combined }] }
@@ -150,7 +183,7 @@ The total generated text, including the bold headers, paragraphs, and all newlin
     }
 
     async function callGemini(payload) {
-      const url = \`\${API_URL}?key=\${USER_API_KEY}\`;
+      const url = `${API_URL}?key=${USER_API_KEY}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -162,7 +195,7 @@ The total generated text, including the bold headers, paragraphs, and all newlin
       }
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({ error: { message: 'Non-JSON error response.' } }));
-        throw new Error(\`API Request failed with status \${response.status}: \${errorBody.error?.message || 'Unknown API error'}\`);
+        throw new Error(`API Request failed with status ${response.status}: ${errorBody.error?.message || 'Unknown API error'}`);
       }
       return await response.json();
     }
@@ -171,8 +204,8 @@ The total generated text, including the bold headers, paragraphs, and all newlin
       hideMessage();
       const userQuery = engineerInput.value.trim();
 
-      // ✅ This guard makes the button show an error instead of doing nothing if key is missing
-      if (!USER_API_KEY || USER_API_KEY === "YOUR_GEMINI_API_KEY_HERE" || USER_API_KEY === "YOUR_RESTRICTED_BROWSER_KEY") {
+      // Guardrails
+      if (!USER_API_KEY || USER_API_KEY === "AIzaSyCzbKIxl1kag2hqRb5bPGqxUp_GlhwqKmY" || USER_API_KEY === "YOUR_RESTRICTED_BROWSER_KEY") {
         showMessage("Error: API Key is missing. Please edit the script and paste your restricted browser key.");
         return;
       }
@@ -202,14 +235,14 @@ The total generated text, including the bold headers, paragraphs, and all newlin
           }
           summaryOutput.value = text;
         } else {
-          if (result.error?.message) throw new Error(\`API Error: \${result.error.message}\`);
+          if (result.error?.message) throw new Error(`API Error: ${result.error.message}`);
           throw new Error("Received an unexpected or empty response from the API.");
         }
       } catch (error) {
         console.error("Summary Generation Error:", error);
         const displayMessage = error.message.includes("API Key Invalid")
           ? error.message
-          : \`Failed to generate summary. Please check your network connection and API key. Details: \${error.message}\`;
+          : `Failed to generate summary. Please check your network connection and API key. Details: ${error.message}`;
         showMessage(displayMessage);
         summaryOutput.value = "Error generating summary.";
       } finally {
@@ -243,9 +276,11 @@ The total generated text, including the bold headers, paragraphs, and all newlin
       }
     }
 
-    // ✅ Expose for inline onclick
+    // Expose for inline onclick
     window.generateSummary = generateSummary;
     window.copyToClipboard = copyToClipboard;
+    window.testClick = testClick;
+    window.clearAll = clearAll;
   </script>
 </body>
 </html>
