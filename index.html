@@ -1,29 +1,168 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Under Construction</title>
-    <style>
-        body {
-            background-color: #f4f4f4;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding-top: 15%;
-            color: #333;
-        }
-        h1 {
-            font-size: 3rem;
-            color: #23378D; /* SMT blue if you want branding */
-        }
-        p {
-            font-size: 1.2rem;
-            margin-top: 10px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Engineering CCC (Gemini 2.5 Flash)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Inter:wght@400;700;900&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    .loader {
+      border: 2px solid #334155;
+      border-top: 2px solid #38bdf8;
+      border-radius: 50%;
+      width: 16px; height: 16px;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
 </head>
-<body>
-    <h1>🚧 Under Construction 🚧</h1>
-    <p>This page is currently being built. Please check back soon.</p>
+
+<body class="p-4 md:p-10 flex justify-center">
+  <div class="max-w-4xl w-full space-y-6">
+    
+    <header class="flex justify-between items-end border-b border-slate-700 pb-4">
+      <div>
+        <h1 class="text-2xl font-black uppercase tracking-tighter text-sky-400">Diagnostic Intelligence</h1>
+        <p class="text-xs font-mono text-slate-500 uppercase">Model: Gemini 2.5 Flash • Format: CCC</p>
+      </div>
+      <div class="text-right">
+        <span class="text-[10px] bg-sky-500/10 text-sky-400 px-2 py-1 rounded border border-sky-500/20 font-bold uppercase">v2.5 Engine</span>
+      </div>
+    </header>
+
+    <div class="glass p-4 rounded-xl">
+      <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Secure API Key</label>
+      <input type="password" id="apiKey" class="w-full p-3 bg-slate-900/50 border border-slate-700 rounded-lg text-sm text-sky-300 outline-none focus:border-sky-500 transition-all" placeholder="Enter Gemini API Key...">
+    </div>
+
+    <div class="grid grid-cols-1 gap-6">
+      
+      <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex justify-between">
+          <span>Technical Field Notes</span>
+          <span class="text-slate-600">Raw Input</span>
+        </label>
+        <textarea id="rawInput" class="w-full h-44 p-4 glass rounded-xl text-sm leading-relaxed outline-none focus:ring-1 focus:ring-sky-500 transition-all" 
+          placeholder="Paste engineer logs here..."></textarea>
+      </div>
+
+      <button onclick="runAnalysis()" id="runBtn" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-sky-900/20 flex items-center justify-center gap-3 uppercase tracking-widest text-sm">
+        <span id="btnLabel">Execute 2.5 Flash Analysis</span>
+        <div id="loader" class="hidden loader"></div>
+      </button>
+
+      <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex justify-between">
+          <span>Processed Payload</span>
+          <span id="charCount" class="text-slate-500">0 / 470</span>
+        </label>
+        <textarea id="cccOutput" readonly class="w-full h-48 p-4 bg-slate-900 border border-slate-700 rounded-xl mono text-sm text-sky-100 resize-none shadow-inner" placeholder="Awaiting analysis..."></textarea>
+        
+        <div class="flex gap-3">
+          <button onclick="copyToClipboard()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-lg text-xs uppercase transition-all">Copy Result</button>
+          <button onclick="resetFields()" class="px-6 bg-slate-800/50 text-slate-500 font-bold py-3 rounded-lg text-xs uppercase hover:text-red-400 transition-all">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function runAnalysis() {
+      const key = document.getElementById('apiKey').value.trim();
+      const input = document.getElementById('rawInput').value.trim();
+      const btn = document.getElementById('runBtn');
+      const label = document.getElementById('btnLabel');
+      const loader = document.getElementById('loader');
+      const output = document.getElementById('cccOutput');
+
+      if (!key || !input) return alert("API Key and Input are required.");
+
+      // UI State: Processing
+      btn.disabled = true;
+      label.innerText = "Processing Data...";
+      loader.classList.remove('hidden');
+
+      // Professional CCC System Instruction
+      const systemInstruction = `Role: Senior Diagnostic Systems Engineer.
+      Task: Transform technician field notes into a structured CCC (Complaint, Cause, Correction) summary.
+      Format:
+      **Complaint**
+      (Fault description/DTCs)
+
+      **Cause**
+      (Root cause/mechanical failure mechanism)
+
+      **Correction**
+      (Action taken/verification data/kPa/OPR codes)
+
+      Constraints:
+      1. Strictly under 470 characters total.
+      2. Use high-level technical terminology.
+      3. Focus on data (kPa, PSI, Bar, DTC).
+      4. End every section with a period.`;
+
+      // API Endpoint for Gemini 2.5 Flash
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${AIzaSyCPdNJWy2xxCftu1ePgj-W3F1e48lYcLas}';
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${systemInstruction}\n\nField Notes: ${input}` }] }],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 300
+            }
+          })
+        });
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+
+        let result = data.candidates[0].content.parts[0].text;
+
+        // Hard character limit safety
+        if (result.length > 470) {
+          result = result.substring(0, 467) + "...";
+        }
+
+        output.value = result;
+        updateCharCount(result.length);
+
+      } catch (err) {
+        output.value = "SYSTEM ERROR: " + err.message;
+      } finally {
+        btn.disabled = false;
+        label.innerText = "Execute 2.5 Flash Analysis";
+        loader.classList.add('hidden');
+      }
+    }
+
+    function updateCharCount(len) {
+      const countDisplay = document.getElementById('charCount');
+      countDisplay.innerText = `${len} / 470`;
+      countDisplay.className = len > 470 ? "text-red-500 font-bold" : "text-slate-500";
+    }
+
+    function copyToClipboard() {
+      const copyText = document.getElementById("cccOutput");
+      if (!copyText.value) return;
+      copyText.select();
+      document.execCommand("copy");
+      alert("Technical payload copied to clipboard.");
+    }
+
+    function resetFields() {
+      document.getElementById('rawInput').value = "";
+      document.getElementById('cccOutput').value = "";
+      updateCharCount(0);
+    }
+  </script>
 </body>
 </html>
