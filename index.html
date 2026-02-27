@@ -3,127 +3,92 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Engineering CCC Diagnostic Tool</title>
+  <title>Engineering CCC (Secure GitHub Build)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Inter:wght@400;700;900&display=swap');
     body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
     .mono { font-family: 'JetBrains Mono', monospace; }
     .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-    .loader {
-      border: 2px solid #334155; border-top: 2px solid #38bdf8; border-radius: 50%;
-      width: 18px; height: 18px; animation: spin 0.8s linear infinite; display: inline-block;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 
 <body class="p-4 md:p-10 flex justify-center">
   <div class="max-w-4xl w-full space-y-6">
-    <header class="border-b border-slate-700 pb-4">
-      <h1 class="text-2xl font-black uppercase tracking-tighter text-sky-400">Diagnostic AI</h1>
-      <p class="text-xs font-mono text-slate-500 uppercase">Gemini 2.5 Flash • Structured JSON Mode</p>
+    
+    <header class="flex justify-between items-center border-b border-slate-700 pb-4">
+      <h1 class="text-2xl font-black uppercase tracking-tighter text-sky-400">Diagnostic Intelligence</h1>
+      <button onclick="updateKey()" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-400 px-3 py-1 rounded border border-slate-700 font-bold uppercase transition-all">
+        Manage API Key
+      </button>
     </header>
 
     <div class="grid grid-cols-1 gap-6">
       <div class="space-y-2">
-        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Field Notes</label>
-        <textarea id="rawInput" class="w-full h-48 p-4 glass rounded-xl text-sm leading-relaxed outline-none focus:ring-1 focus:ring-sky-500 border border-slate-700 shadow-inner" 
-          placeholder="Paste technician logs here..."></textarea>
+        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Technician Field Notes</label>
+        <textarea id="rawInput" class="w-full h-48 p-4 glass rounded-xl text-sm leading-relaxed outline-none focus:ring-1 focus:ring-sky-500 border border-slate-700" placeholder="Paste notes..."></textarea>
       </div>
 
-      <button onclick="runAnalysis()" id="runBtn" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-black py-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-3 uppercase tracking-widest text-sm active:scale-95">
+      <button onclick="runAnalysis()" id="runBtn" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-black py-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-3 uppercase tracking-widest text-sm">
         <span id="btnLabel">Generate Technical Summary</span>
-        <div id="loader" class="hidden loader"></div>
       </button>
 
       <div class="space-y-2">
         <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex justify-between">
-          <span>Final Output (CCC)</span>
+          <span>CCC Output</span>
           <span id="charCount" class="text-slate-500 font-mono text-[10px]">0 / 470</span>
         </label>
-        <textarea id="cccOutput" readonly class="w-full h-64 p-4 bg-slate-900 border border-slate-700 rounded-xl mono text-sm text-sky-100 resize-none shadow-inner tracking-tight font-medium"></textarea>
-        
-        <div class="flex gap-3">
-          <button onclick="copyToClipboard()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-lg text-xs uppercase transition-all border border-slate-600">Copy Result</button>
-          <button onclick="resetFields()" class="px-6 bg-slate-800/50 text-slate-500 font-bold py-3 rounded-lg text-xs uppercase hover:text-red-400 transition-all border border-slate-700">Clear</button>
-        </div>
+        <textarea id="cccOutput" readonly class="w-full h-64 p-4 bg-slate-900 border border-slate-700 rounded-xl mono text-sm text-sky-100 resize-none shadow-inner"></textarea>
       </div>
     </div>
   </div>
 
-  <script src="config.js"></script>
+  <script>
+    // Retrieves key from YOUR browser storage only
+    const getSavedKey = () => localStorage.getItem('diag_ai_key');
 
     async function runAnalysis() {
+      const apiKey = getSavedKey();
       const input = document.getElementById('rawInput').value.trim();
-      const btn = document.getElementById('runBtn');
-      const label = document.getElementById('btnLabel');
-      const loader = document.getElementById('loader');
       const output = document.getElementById('cccOutput');
 
-      if (!API_KEY || API_KEY === "YOUR_API_KEY_HERE") return alert("Key Missing.");
-      if (!input) return alert("No input provided.");
+      if (!apiKey) {
+        alert("No API key found. Please click 'Manage API Key' to set it.");
+        return updateKey();
+      }
 
-      btn.disabled = true;
-      loader.classList.remove('hidden');
-      label.innerText = "Processing JSON...";
-      output.value = "Analyzing mechanical data...";
+      output.value = "Analyzing...";
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
-
-      const payload = {
-        contents: [{
-          parts: [{
-            text: `Extract technical data from these notes: "${input}". 
-            Return a JSON object with keys: "complaint", "cause", "correction". 
-            Rules:
-            - Complaint: Summary of symptoms/DTCs.
-            - Cause: Root failure mechanism.
-            - Correction: Fix performed and verification data.
-            - Keep the TOTAL string length under 470 chars. 
-            - Use professional technical engineering language.`
-          }]
-        }],
-        generationConfig: {
-          response_mime_type: "application/json",
-          temperature: 0.1
-        },
-        safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ]
-      };
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
       try {
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `Format as JSON CCC: "${input}". Max 470 chars.` }] }],
+            generationConfig: { response_mime_type: "application/json", temperature: 0.1 }
+          })
         });
 
         const data = await response.json();
         if (data.error) throw new Error(data.error.message);
 
-        const jsonResponse = JSON.parse(data.candidates[0].content.parts[0].text);
+        const json = JSON.parse(data.candidates[0].content.parts[0].text);
+        const result = `**Complaint**\n${json.complaint}\n\n**Cause**\n${json.cause}\n\n**Correction**\n${json.correction}`;
         
-        // Construct the final text from JSON
-        let finalOutput = `**Complaint**\n${jsonResponse.complaint}\n\n**Cause**\n${jsonResponse.cause}\n\n**Correction**\n${jsonResponse.correction}`;
-
-        if (finalOutput.length > 470) {
-            finalOutput = finalOutput.substring(0, 467) + "...";
-        }
-
-        output.value = finalOutput;
-        document.getElementById('charCount').innerText = `${finalOutput.length} / 470`;
-
+        output.value = result;
+        document.getElementById('charCount').innerText = `${result.length} / 470`;
       } catch (err) {
-        output.value = "PROCESS ERROR: " + err.message;
-      } finally {
-        btn.disabled = false;
-        loader.classList.add('hidden');
-        label.innerText = "Generate Technical Summary";
+        output.value = "ERROR: " + err.message;
+      }
+    }
+
+    function updateKey() {
+      const newKey = prompt("Enter your Gemini API Key. It will be stored locally in your browser, NOT on GitHub.");
+      if (newKey) {
+        localStorage.setItem('diag_ai_key', newKey);
+        alert("Key Saved to Local Storage.");
       }
     }
 
@@ -131,13 +96,6 @@
       const el = document.getElementById("cccOutput");
       el.select();
       document.execCommand("copy");
-      alert("Summary copied.");
-    }
-
-    function resetFields() {
-      document.getElementById('rawInput').value = "";
-      document.getElementById('cccOutput').value = "";
-      document.getElementById('charCount').innerText = "0 / 470";
     }
   </script>
 </body>
