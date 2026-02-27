@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Engineering Diagnostic AI (CCC)</title>
+  <title>Engineering CCC Diagnostic Tool</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Inter:wght@400;700;900&display=swap');
@@ -20,18 +20,15 @@
 
 <body class="p-4 md:p-10 flex justify-center">
   <div class="max-w-4xl w-full space-y-6">
-    
-    <header class="flex justify-between items-end border-b border-slate-700 pb-4">
-      <div>
-        <h1 class="text-2xl font-black uppercase tracking-tighter text-sky-400">Diagnostic Intelligence</h1>
-        <p class="text-xs font-mono text-slate-500 uppercase">Model: Gemini 2.5 Flash • Format: CCC</p>
-      </div>
+    <header class="border-b border-slate-700 pb-4">
+      <h1 class="text-2xl font-black uppercase tracking-tighter text-sky-400">Diagnostic AI</h1>
+      <p class="text-xs font-mono text-slate-500 uppercase">Gemini 2.5 Flash • Structured JSON Mode</p>
     </header>
 
     <div class="grid grid-cols-1 gap-6">
       <div class="space-y-2">
-        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Technician Field Notes</label>
-        <textarea id="rawInput" class="w-full h-56 p-4 glass rounded-xl text-sm leading-relaxed outline-none focus:ring-1 focus:ring-sky-500 border border-slate-700 shadow-inner" 
+        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Field Notes</label>
+        <textarea id="rawInput" class="w-full h-48 p-4 glass rounded-xl text-sm leading-relaxed outline-none focus:ring-1 focus:ring-sky-500 border border-slate-700 shadow-inner" 
           placeholder="Paste technician logs here..."></textarea>
       </div>
 
@@ -42,10 +39,10 @@
 
       <div class="space-y-2">
         <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex justify-between">
-          <span>Professional Output (CCC)</span>
+          <span>Final Output (CCC)</span>
           <span id="charCount" class="text-slate-500 font-mono text-[10px]">0 / 470</span>
         </label>
-        <textarea id="cccOutput" readonly class="w-full h-64 p-4 bg-slate-900 border border-slate-700 rounded-xl mono text-sm text-sky-100 resize-none shadow-inner tracking-tight"></textarea>
+        <textarea id="cccOutput" readonly class="w-full h-64 p-4 bg-slate-900 border border-slate-700 rounded-xl mono text-sm text-sky-100 resize-none shadow-inner tracking-tight font-medium"></textarea>
         
         <div class="flex gap-3">
           <button onclick="copyToClipboard()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-lg text-xs uppercase transition-all border border-slate-600">Copy Result</button>
@@ -66,89 +63,83 @@
       const loader = document.getElementById('loader');
       const output = document.getElementById('cccOutput');
 
-      if (!API_KEY || API_KEY === "YOUR_API_KEY_HERE") return alert("Error: API Key is missing from the script.");
-      if (!input) return alert("Please input technical notes.");
+      if (!API_KEY || API_KEY === "YOUR_API_KEY_HERE") return alert("Key Missing.");
+      if (!input) return alert("No input provided.");
 
       btn.disabled = true;
-      label.innerText = "Analyzing Engineering Data...";
       loader.classList.remove('hidden');
-      output.value = "Gemini 2.5 Flash is processing technical entities...";
-
-      // Prompt Engineering optimized for 2.5 Flash logic
-      const systemInstruction = `You are a Senior Systems Engineer. Summarize the following field notes into the EXACT format below. You MUST provide all three sections.
-
-**Complaint**
-[List symptoms and DTC codes]
-
-**Cause**
-[State the root mechanical/electrical failure]
-
-**Correction**
-[Detail repairs and post-repair verification data]
-
-Rules:
-1. STRICTLY under 470 characters total.
-2. Use professional terminology (e.g., 'pneumatic circuit', 'integrity verified').
-3. End every section with a period.
-4. If a section is unknown, write 'Investigation required.'
-5. DO NOT truncate the correction section.`;
+      label.innerText = "Processing JSON...";
+      output.value = "Analyzing mechanical data...";
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+
+      const payload = {
+        contents: [{
+          parts: [{
+            text: `Extract technical data from these notes: "${input}". 
+            Return a JSON object with keys: "complaint", "cause", "correction". 
+            Rules:
+            - Complaint: Summary of symptoms/DTCs.
+            - Cause: Root failure mechanism.
+            - Correction: Fix performed and verification data.
+            - Keep the TOTAL string length under 470 chars. 
+            - Use professional technical engineering language.`
+          }]
+        }],
+        generationConfig: {
+          response_mime_type: "application/json",
+          temperature: 0.1
+        },
+        safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ]
+      };
 
       try {
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: `${systemInstruction}\n\nNotes to process:\n${input}` }] }],
-            generationConfig: {
-              temperature: 0.1, 
-              maxOutputTokens: 500, // Enough headroom for full response
-              topP: 1
-            }
-          })
+          body: JSON.stringify(payload)
         });
 
         const data = await response.json();
         if (data.error) throw new Error(data.error.message);
 
-        let result = data.candidates[0].content.parts[0].text;
+        const jsonResponse = JSON.parse(data.candidates[0].content.parts[0].text);
+        
+        // Construct the final text from JSON
+        let finalOutput = `**Complaint**\n${jsonResponse.complaint}\n\n**Cause**\n${jsonResponse.cause}\n\n**Correction**\n${jsonResponse.correction}`;
 
-        // Smart-shrink: If too long, we remove double newlines before hard-cutting
-        if (result.length > 470) {
-          result = result.substring(0, 467) + "...";
+        if (finalOutput.length > 470) {
+            finalOutput = finalOutput.substring(0, 467) + "...";
         }
 
-        output.value = result;
-        updateCharCount(result.length);
+        output.value = finalOutput;
+        document.getElementById('charCount').innerText = `${finalOutput.length} / 470`;
 
       } catch (err) {
-        output.value = "SYSTEM ERROR: " + err.message;
+        output.value = "PROCESS ERROR: " + err.message;
       } finally {
         btn.disabled = false;
-        label.innerText = "Generate Technical Summary";
         loader.classList.add('hidden');
+        label.innerText = "Generate Technical Summary";
       }
     }
 
-    function updateCharCount(len) {
-      const countDisplay = document.getElementById('charCount');
-      countDisplay.innerText = `${len} / 470`;
-      countDisplay.className = len > 470 ? "text-red-500 font-bold font-mono text-[10px]" : "text-slate-500 font-mono text-[10px]";
-    }
-
     function copyToClipboard() {
-      const copyText = document.getElementById("cccOutput");
-      if (!copyText.value) return;
-      copyText.select();
+      const el = document.getElementById("cccOutput");
+      el.select();
       document.execCommand("copy");
-      alert("Summary copied to clipboard.");
+      alert("Summary copied.");
     }
 
     function resetFields() {
       document.getElementById('rawInput').value = "";
       document.getElementById('cccOutput').value = "";
-      updateCharCount(0);
+      document.getElementById('charCount').innerText = "0 / 470";
     }
   </script>
 </body>
