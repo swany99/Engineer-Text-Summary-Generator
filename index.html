@@ -10,6 +10,8 @@
     body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
     .mono { font-family: 'JetBrains Mono', monospace; }
     .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    .loader { border: 2px solid #334155; border-top: 2px solid #38bdf8; border-radius: 50%; width: 18px; height: 18px; animation: spin 0.8s linear infinite; display: inline-block; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 
@@ -17,28 +19,37 @@
   <div class="max-w-4xl w-full space-y-6">
     
     <header class="flex justify-between items-center border-b border-slate-700 pb-4">
-      <h1 class="text-2xl font-black uppercase tracking-tighter text-sky-400">Diagnostic Intelligence</h1>
+      <div>
+        <h1 class="text-2xl font-black uppercase tracking-tighter text-sky-400">Diagnostic Intelligence</h1>
+        <p class="text-[10px] font-mono text-slate-500 uppercase">Gemini 3 Flash • Secure Build</p>
+      </div>
       <button onclick="updateKey()" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-400 px-3 py-1 rounded border border-slate-700 font-bold uppercase transition-all">
-        Manage API Key
+        Set/Update API Key
       </button>
     </header>
 
     <div class="grid grid-cols-1 gap-6">
       <div class="space-y-2">
         <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Technician Field Notes</label>
-        <textarea id="rawInput" class="w-full h-48 p-4 glass rounded-xl text-sm leading-relaxed outline-none focus:ring-1 focus:ring-sky-500 border border-slate-700" placeholder="Paste notes..."></textarea>
+        <textarea id="rawInput" class="w-full h-48 p-4 glass rounded-xl text-sm leading-relaxed outline-none focus:ring-1 focus:ring-sky-500 border border-slate-700 shadow-inner" placeholder="Paste notes here..."></textarea>
       </div>
 
-      <button onclick="runAnalysis()" id="runBtn" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-black py-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-3 uppercase tracking-widest text-sm">
+      <button onclick="runAnalysis()" id="runBtn" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-black py-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-3 uppercase tracking-widest text-sm active:scale-95">
         <span id="btnLabel">Generate Technical Summary</span>
+        <div id="loader" class="hidden loader"></div>
       </button>
 
       <div class="space-y-2">
         <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex justify-between">
-          <span>CCC Output</span>
+          <span>Final Output (CCC)</span>
           <span id="charCount" class="text-slate-500 font-mono text-[10px]">0 / 470</span>
         </label>
-        <textarea id="cccOutput" readonly class="w-full h-64 p-4 bg-slate-900 border border-slate-700 rounded-xl mono text-sm text-sky-100 resize-none shadow-inner"></textarea>
+        <textarea id="cccOutput" readonly class="w-full h-64 p-4 bg-slate-900 border border-slate-700 rounded-xl mono text-sm text-sky-100 resize-none shadow-inner tracking-tight font-medium"></textarea>
+        
+        <div class="flex gap-3">
+          <button onclick="copyToClipboard()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-lg text-xs uppercase transition-all border border-slate-600">Copy Result</button>
+          <button onclick="resetFields()" class="px-6 bg-slate-800/50 text-slate-500 font-bold py-3 rounded-lg text-xs uppercase hover:text-red-400 transition-all border border-slate-700">Clear</button>
+        </div>
       </div>
     </div>
   </div>
@@ -50,23 +61,36 @@
     async function runAnalysis() {
       const apiKey = getSavedKey();
       const input = document.getElementById('rawInput').value.trim();
+      const btn = document.getElementById('runBtn');
+      const label = document.getElementById('btnLabel');
+      const loader = document.getElementById('loader');
       const output = document.getElementById('cccOutput');
 
       if (!apiKey) {
-        alert("No API key found. Please click 'Manage API Key' to set it.");
-        return updateKey();
+        alert("No API key found. Please click 'Set API Key' at the top right.");
+        return;
       }
+      if (!input) return alert("Please enter notes.");
 
-      output.value = "Analyzing...";
+      btn.disabled = true;
+      loader.classList.remove('hidden');
+      label.innerText = "Analyzing...";
+      output.value = "Processing engineering data...";
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      // Standardizing the Prompt
+      const systemInstruction = `Extract technical data into JSON with keys "complaint", "cause", "correction". 
+      Use professional engineering language. 
+      Total character count must be under 470.
+      Notes: ${input}`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
       try {
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: `Format as JSON CCC: "${input}". Max 470 chars.` }] }],
+            contents: [{ parts: [{ text: systemInstruction }] }],
             generationConfig: { response_mime_type: "application/json", temperature: 0.1 }
           })
         });
@@ -75,27 +99,51 @@
         if (data.error) throw new Error(data.error.message);
 
         const json = JSON.parse(data.candidates[0].content.parts[0].text);
-        const result = `**Complaint**\n${json.complaint}\n\n**Cause**\n${json.cause}\n\n**Correction**\n${json.correction}`;
         
-        output.value = result;
-        document.getElementById('charCount').innerText = `${result.length} / 470`;
+        // Handle case variations and missing keys
+        const c = json.complaint || json.Complaint || "Detail missing.";
+        const cs = json.cause || json.Cause || "Detail missing.";
+        const cr = json.correction || json.Correction || "Detail missing.";
+
+        let finalResult = `**Complaint**\n${c}\n\n**Cause**\n${cs}\n\n**Correction**\n${cr}`;
+        
+        if (finalResult.length > 470) {
+          finalResult = finalResult.substring(0, 467) + "...";
+        }
+
+        output.value = finalResult;
+        document.getElementById('charCount').innerText = `${finalResult.length} / 470`;
+
       } catch (err) {
-        output.value = "ERROR: " + err.message;
+        output.value = "ERROR: " + err.message + "\n\nTry updating your API key.";
+      } finally {
+        btn.disabled = false;
+        loader.classList.add('hidden');
+        label.innerText = "Generate Technical Summary";
       }
     }
 
     function updateKey() {
-      const newKey = prompt("Enter your Gemini API Key. It will be stored locally in your browser, NOT on GitHub.");
-      if (newKey) {
-        localStorage.setItem('diag_ai_key', newKey);
-        alert("Key Saved to Local Storage.");
+      const current = getSavedKey();
+      const newKey = prompt("Enter your Gemini API Key. This is stored in your browser's LocalStorage and is never uploaded to GitHub.", current || "");
+      if (newKey !== null) {
+        localStorage.setItem('diag_ai_key', newKey.trim());
+        if (newKey) alert("API Key saved to your browser.");
       }
     }
 
     function copyToClipboard() {
       const el = document.getElementById("cccOutput");
+      if (!el.value || el.value.includes("Processing")) return;
       el.select();
       document.execCommand("copy");
+      alert("Summary copied!");
+    }
+
+    function resetFields() {
+      document.getElementById('rawInput').value = "";
+      document.getElementById('cccOutput').value = "";
+      document.getElementById('charCount').innerText = "0 / 470";
     }
   </script>
 </body>
