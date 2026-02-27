@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Engineering CCC (Gemini 2.5 Flash)</title>
+  <title>Engineering Diagnostic AI (CCC)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Inter:wght@400;700;900&display=swap');
@@ -11,12 +11,8 @@
     .mono { font-family: 'JetBrains Mono', monospace; }
     .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
     .loader {
-      border: 2px solid #334155;
-      border-top: 2px solid #38bdf8;
-      border-radius: 50%;
-      width: 16px; height: 16px;
-      animation: spin 0.8s linear infinite;
-      display: inline-block;
+      border: 2px solid #334155; border-top: 2px solid #38bdf8; border-radius: 50%;
+      width: 18px; height: 18px; animation: spin 0.8s linear infinite; display: inline-block;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
@@ -30,94 +26,105 @@
         <h1 class="text-2xl font-black uppercase tracking-tighter text-sky-400">Diagnostic Intelligence</h1>
         <p class="text-xs font-mono text-slate-500 uppercase">Model: Gemini 2.5 Flash • Format: CCC</p>
       </div>
-      <div class="text-right">
-        <span class="text-[10px] bg-sky-500/10 text-sky-400 px-2 py-1 rounded border border-sky-500/20 font-bold uppercase">v2.5 Engine</span>
+      <div class="hidden sm:block">
+        <span class="text-[10px] bg-sky-500/10 text-sky-400 px-2 py-1 rounded border border-sky-500/20 font-bold uppercase">Ready</span>
       </div>
     </header>
-
-    <div class="glass p-4 rounded-xl">
-      <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Secure API Key</label>
-      <input type="password" id="apiKey" class="w-full p-3 bg-slate-900/50 border border-slate-700 rounded-lg text-sm text-sky-300 outline-none focus:border-sky-500 transition-all" placeholder="Enter Gemini API Key...">
-    </div>
 
     <div class="grid grid-cols-1 gap-6">
       
       <div class="space-y-2">
         <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex justify-between">
           <span>Technical Field Notes</span>
-          <span class="text-slate-600">Raw Input</span>
+          <span class="text-slate-600">Input Data</span>
         </label>
-        <textarea id="rawInput" class="w-full h-44 p-4 glass rounded-xl text-sm leading-relaxed outline-none focus:ring-1 focus:ring-sky-500 transition-all" 
-          placeholder="Paste engineer logs here..."></textarea>
+        <textarea id="rawInput" class="w-full h-56 p-4 glass rounded-xl text-sm leading-relaxed outline-none focus:ring-1 focus:ring-sky-500 transition-all border border-slate-700 shadow-inner" 
+          placeholder="Paste technician logs, DTCs, and pressure readings here..."></textarea>
       </div>
 
-      <button onclick="runAnalysis()" id="runBtn" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-sky-900/20 flex items-center justify-center gap-3 uppercase tracking-widest text-sm">
-        <span id="btnLabel">Execute 2.5 Flash Analysis</span>
+      <button onclick="runAnalysis()" id="runBtn" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-black py-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-3 uppercase tracking-widest text-sm active:scale-95">
+        <span id="btnLabel">Generate Technical Summary</span>
         <div id="loader" class="hidden loader"></div>
       </button>
 
       <div class="space-y-2">
         <label class="text-xs font-bold text-slate-400 uppercase tracking-widest flex justify-between">
-          <span>Processed Payload</span>
-          <span id="charCount" class="text-slate-500">0 / 470</span>
+          <span>Professional Output (CCC)</span>
+          <span id="charCount" class="text-slate-500 font-mono">0 / 470</span>
         </label>
-        <textarea id="cccOutput" readonly class="w-full h-48 p-4 bg-slate-900 border border-slate-700 rounded-xl mono text-sm text-sky-100 resize-none shadow-inner" placeholder="Awaiting analysis..."></textarea>
+        <textarea id="cccOutput" readonly class="w-full h-56 p-4 bg-slate-900 border border-slate-700 rounded-xl mono text-sm text-sky-100 resize-none shadow-inner" placeholder="Summary will appear here..."></textarea>
         
         <div class="flex gap-3">
-          <button onclick="copyToClipboard()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-lg text-xs uppercase transition-all">Copy Result</button>
-          <button onclick="resetFields()" class="px-6 bg-slate-800/50 text-slate-500 font-bold py-3 rounded-lg text-xs uppercase hover:text-red-400 transition-all">Clear</button>
+          <button onclick="copyToClipboard()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-lg text-xs uppercase transition-all">Copy to Clipboard</button>
+          <button onclick="resetFields()" class="px-6 bg-slate-800/50 text-slate-500 font-bold py-3 rounded-lg text-xs uppercase hover:text-red-400 transition-all">Clear All</button>
         </div>
       </div>
     </div>
+
+    <footer class="text-center pt-10">
+      <p class="text-[10px] text-slate-600 uppercase font-bold tracking-widest italic">Confidential Engineering Tool</p>
+    </footer>
   </div>
 
   <script>
+    /**
+     * 🔑 INSTRUCTIONS:
+     * Paste your Gemini API key inside the quotes below.
+     * The users will never see this field in the interface.
+     */
+    const CONFIG = {
+      API_KEY: "AIzaSyCPdNJWy2xxCftu1ePgj-W3F1e48lYcLas", 
+      MODEL: "gemini-2.5-flash"
+    };
+
     async function runAnalysis() {
-      const key = document.getElementById('apiKey').value.trim();
       const input = document.getElementById('rawInput').value.trim();
       const btn = document.getElementById('runBtn');
       const label = document.getElementById('btnLabel');
       const loader = document.getElementById('loader');
       const output = document.getElementById('cccOutput');
 
-      if (!key || !input) return alert("API Key and Input are required.");
+      if (!CONFIG.API_KEY || CONFIG.API_KEY === "YOUR_API_KEY_HERE") {
+        return alert("Error: API Key is missing from the script code.");
+      }
+      if (!input) return alert("Please input technical notes.");
 
-      // UI State: Processing
+      // UI State: Loading
       btn.disabled = true;
-      label.innerText = "Processing Data...";
+      label.innerText = "Analyzing Engineering Data...";
       loader.classList.remove('hidden');
+      output.value = "Gemini 2.5 Flash is processing technical entities...";
 
-      // Professional CCC System Instruction
-      const systemInstruction = `Role: Senior Diagnostic Systems Engineer.
-      Task: Transform technician field notes into a structured CCC (Complaint, Cause, Correction) summary.
-      Format:
+      // Professional Prompt Engineering for CCC Format
+      const systemInstruction = `Role: Heavy Machinery Diagnostic Engineer.
+      Output Format:
       **Complaint**
-      (Fault description/DTCs)
+      (List fault/DTCs clearly)
 
       **Cause**
-      (Root cause/mechanical failure mechanism)
+      (Identify root failure mechanism)
 
       **Correction**
-      (Action taken/verification data/kPa/OPR codes)
+      (Detail repairs and post-repair spec verification)
 
-      Constraints:
+      Rules:
       1. Strictly under 470 characters total.
-      2. Use high-level technical terminology.
-      3. Focus on data (kPa, PSI, Bar, DTC).
-      4. End every section with a period.`;
+      2. Use dense technical terminology (e.g., 'restriction', 'cavitation', 'remediated').
+      3. Extract and prioritize numerical data (kPa, Bar, PSI, OPR).
+      4. Every paragraph ends with a period.
+      5. Two newlines between sections.`;
 
-      // API Endpoint for Gemini 2.5 Flash
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${AIzaSyCPdNJWy2xxCftu1ePgj-W3F1e48lYcLas}';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.MODEL}:generateContent?key=${CONFIG.API_KEY}`;
 
       try {
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: `${systemInstruction}\n\nField Notes: ${input}` }] }],
+            contents: [{ parts: [{ text: `${systemInstruction}\n\nTechnical Notes: ${input}` }] }],
             generationConfig: {
-              temperature: 0.1,
-              maxOutputTokens: 300
+              temperature: 0.1, // Ensure strict, non-creative technical output
+              maxOutputTokens: 350
             }
           })
         });
@@ -127,7 +134,7 @@
 
         let result = data.candidates[0].content.parts[0].text;
 
-        // Hard character limit safety
+        // Hard character limit safety trim
         if (result.length > 470) {
           result = result.substring(0, 467) + "...";
         }
@@ -139,7 +146,7 @@
         output.value = "SYSTEM ERROR: " + err.message;
       } finally {
         btn.disabled = false;
-        label.innerText = "Execute 2.5 Flash Analysis";
+        label.innerText = "Generate Technical Summary";
         loader.classList.add('hidden');
       }
     }
@@ -147,15 +154,15 @@
     function updateCharCount(len) {
       const countDisplay = document.getElementById('charCount');
       countDisplay.innerText = `${len} / 470`;
-      countDisplay.className = len > 470 ? "text-red-500 font-bold" : "text-slate-500";
+      countDisplay.className = len > 470 ? "text-red-500 font-bold font-mono" : "text-slate-500 font-mono";
     }
 
     function copyToClipboard() {
       const copyText = document.getElementById("cccOutput");
-      if (!copyText.value) return;
+      if (!copyText.value || copyText.value.startsWith("Gemini")) return;
       copyText.select();
       document.execCommand("copy");
-      alert("Technical payload copied to clipboard.");
+      alert("Technical Summary Copied.");
     }
 
     function resetFields() {
